@@ -1,4 +1,4 @@
-import type { Concept } from '@/lib/mock-data';
+import type { Concept } from '@/lib/remix-engine';
 export function ProductImage({concept}:{concept:Concept}) { return <div role="img" aria-label={`${concept.name} made from recovered blue denim`} className="product-image" style={{backgroundPosition:`${concept.position} center`}}/>; }
 export function Progress({value,max,label}:{value:number;max:number;label:string}) {return <div className="progress" role="progressbar" aria-label={label} aria-valuenow={Math.min(value,max)} aria-valuetext={`${value} of ${max}`} aria-valuemin={0} aria-valuemax={max}><span style={{width:`${Math.min(100,value/max*100)}%`}}/></div>;}
 export function SectionTitle({eyebrow,title,description}:{eyebrow:string;title:string;description?:string}) {return <div className="section-title"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1>{description&&<p>{description}</p>}</div>;}

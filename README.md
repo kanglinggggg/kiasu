@@ -2,95 +2,131 @@
 
 **Turn surplus into products people have already chosen.**
 
-A hackathon MVP exploring demand-backed circular retail. The waste already exists. The demand is validated. Only then do we produce.
+A Next.js hackathon MVP for demand-before-production circular retail. It compares keeping products in use, repairing them, remaking material and recycling. It then tests demand for one selected Remix concept before unlocking production.
 
-## Problem statement
+## Run
 
-Surplus retail inventory loses value through markdowns, storage and disposal. Remaking inventory without testing demand can create another generation of unwanted products. Brands need to compare recovery routes, identify feasible remakes, and validate willingness to buy before manufacturing.
+Node.js 22+ and npm:
 
-## Solution
-
-Remix Drop connects circular route comparison with product concepts, consumer votes, reservations and simulated pre-orders. The demo recommends Remix for one reference denim batch while preserving clearance, repair and recycling as alternatives. It does not automatically upcycle everything.
-
-## Run locally
-
-Requires Node.js 22+ and npm.
-
-```bash
+```sh
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000. If Next.js selects another port, use the URL in the terminal.
+Open the local URL printed by Next.js (normally http://localhost:3000).
 
-```bash
+```sh
 npm run typecheck
+node --test tests/engines.test.cjs
 npm run build
 ```
 
-The build produces a static Next.js export in `out/`, suitable for static hosting. `next start` is not used for this export; serve `out/` with a static server for a production preview.
+The production build statically exports to `out/`. Host that directory on a static web server; `next start` is not the preview command for a static export.
 
-## Three-minute user workflow
+## Problem and solution
 
-1. **Surplus inventory:** review or edit the prefilled 180-jean batch, then submit. Required numeric fields validate positive quantities.
-2. **Circular route analysis:** compare clearance, repair + resale, remix and recycling. Select alternatives to inspect the decision. The supplied demo recommends Remix.
-3. **Remix concepts:** inspect Denim Tote, Laptop Sleeve and Patchwork Jacket with costs, prices, capacities, utilisation, difficulty and reasons.
-4. **Consumer drop:** vote, reserve, or open the simulated pre-order confirmation. Each action is counted once per concept in the current session. All three product cards show responsive demand statistics.
-5. **Production threshold:** use “Demo: add the 42nd pre-order” or pre-order the tote. The 41 → 42 transition opens the production-unlocked celebration.
-6. **Impact:** select “See the impact”. The live demo count starts at 42. “Simulate 48 buyers” advances the follow-on scenario to 48, alongside the supplied impact projections.
+Surplus inventory loses value. Remaking it without checking demand can produce another generation of unwanted products. Remix Drop first compares circular routes, then uses material-constrained concepts and simulated pre-orders to demonstrate how brands can avoid speculative remanufacturing.
 
-The header reset button restores all initial values. Stage navigation and both Brand Studio and Consumer Drop are accessible throughout the demo. State is local React state and resets on reload; there are no accounts, payments, backend calls or persistent shared orders.
+This iteration is a deterministic prototype, **not a scientifically validated decision system**, real demand prediction or production marketplace. No authentication, payments, Supabase or external API is required.
 
-## Architecture
+## Three-minute demo
+
+1. Start with 180 Denim Jeans, Cotton Denim, Unsold / Minor Defects, SGD 69 original price and 142 kg reusable material.
+2. Analyse routes. Remix wins the calculated comparison; expand **Why this route?** to inspect inputs and weighted score contributions.
+3. Inspect three alternative designs: Tote capacity 68, Sleeve 92, Jacket 31. Select Denim Tote and launch its consumer drop.
+4. Tote begins with 41 / 42 simulated confirmed pre-orders. Vote, reserve, or confirm a demo pre-order. The explicit 42nd-order demo button uses the same order action.
+5. The 42nd order goes directly to the impact view with an animated **PRODUCTION UNLOCKED** banner, 42 orders and SGD 2,058 committed gross sales.
+6. The same view shows 180 jeans **assessed**, 84% estimated design utilisation, 68 maximum units, SGD 3,332 maximum potential gross sales, and zero speculative units produced before validation.
+
+Reset restores all defaults. Editing inventory resets demand so previous commitments cannot silently survive changes to material, cost or capacity. Switching the selected concept also starts its own seeded demand scenario; after the user places an order, reset or edit inventory before switching. Non-selected concepts remain interest tests with votes and reservations, not competing material commitments.
+
+## Calculation architecture
 
 ```text
-Next.js App Router (static export)
-  └─ RemixApp: workflow + batch + demand state
-      ├─ Brand inventory form
-      ├─ Circular route comparison
-      ├─ Material-led product concepts
-      ├─ Consumer cards + simulated checkout
-      ├─ Unlock modal
-      └─ Impact scenario
+lib/mock-data.ts       Typed inputs, material/condition assumptions,
+                      product recipes and simulated demand seeds
+        ↓
+lib/remix-engine.ts    Available material → capacities, design yields,
+                      suggested prices, unit costs and feasibility
+        ↓
+lib/circular-engine.ts Four routes → gross value estimates,
+                      factor contributions, explanations and recommendation
 
-lib/mock-data.ts → typed batch, routes, concepts, demand seeds
-components/ui.tsx → product imagery, progress, section headings
-app/globals.css → responsive visual system, animation, reduced motion
+lib/economics.ts       Selected concept + confirmed orders → gross sales,
+                      estimated production cost and unlock eligibility
+        ↓
+React workflow state → route-analysis / concepts-view / consumer-drop / impact-view
 ```
 
-## Core concepts
+The UI consumes engine results; it does not store fixed route scores, capacities or impact revenue. Product recipes and behavioural assumptions live outside the UI. React state is session-local and resets on reload.
 
-- **Circular value ladder:** assess resale and repair before remaking or recycling. The mock route recommendation is explicit and inspectable.
-- **Demand before production:** votes and reservations express intent; only demo pre-orders count toward the threshold.
-- **Waste-defined scarcity:** the tote is capped at a stated material capacity of 68. Concept capacities describe alternative uses of the same batch and cannot be summed.
-- **Zero speculative Remix units:** the prototype demonstrates the rule; it does not create real manufacturing orders or measure real waste reduction.
+## Material and capacity assumptions
 
-## Demo assumptions and limitations
+- Estimated reference reusable weight per source item: `142 / 180` kg.
+- Entered reusable kg is optional. If blank, use quantity × estimated weight/item. Entering zero intentionally means no reusable material.
+- Quantity edits proportionally scale entered kg using the last kg/item ratio. The user can then override kg. The engine caps available kg at quantity × reference kg/item; this is an explicit conservative prototype rule, not a verified physical measurement.
+- Effective material = available kg × material yield × condition panel suitability.
+- Cotton Denim yield = 1; Cotton Blend Denim = 0.85.
+- Condition panel factors: minor defects 1; good condition 1; broken fastenings 0.95; damaged reusable panels 0.7; fibre-only 0.
+- Prototype input allowances per finished product: Tote `142 / 68` kg, Sleeve `142 / 92` kg, Jacket `142 / 31` kg. These are calibration assumptions covering grading, matching and panel constraints; they are not claims about finished product weight or validated cutting patterns.
+- Maximum capacity = floor(effective material / input allowance). A small numeric tolerance avoids floating-point rounding one exact whole unit down.
+- Design utilisation: base 84%, 77%, 90% respectively × material yield, rounded; zero if no effective material. This is a design estimate for material allocated to that concept, not the percentage of all assessed garments diverted.
+- Concepts are **alternative uses of the same material**. Their capacities cannot be added together. Only one selected concept accepts pre-orders.
 
-All route scores and figures are supplied illustrative fixtures, not a validated AI analysis, maker quote or environmental assessment. Editing the batch stores and displays your inputs but does not recalculate the reference route/concept/impact estimates; the interface states this explicitly.
+## Prices, costs and production minimum
 
-The requested tote threshold is fixed at **42**. It is not computed from costs. If setup cost is SGD 800 and contribution is SGD 19/unit, the mathematical break-even is 43, not 42. No setup-cost claim is made in this demo.
+Suggested selling price = round(base concept price × sqrt(original retail price / 69) × material price factor), minimum SGD 1. Base prices are SGD 49 / 35 / 95. Cotton factor is 1; blend factor is 0.95.
 
-The requested SGD 4,380 projected inventory recovery value is a full-batch illustrative scenario, not tote revenue: 68 × SGD 49 = SGD 3,332 gross tote revenue. Gross recovery must not be treated as profit. The 180-jean and 84% impact figures do not establish actual material consumption or avoided disposal. The interface labels these projections and distinguishes them from the interactive order count.
+Estimated unit production cost = base cost (SGD 18 / 14 / 42) × material cost factor × condition cost factor × small-batch loading. Blend cost factor is 1.1; cotton is 1. Condition factors are 1 / 1 / 1.1 / 1.2 / 1.5 in the condition order above. Small-batch loading is 1.2 when capacity is below the maker minimum, otherwise 1.
 
-Before production, a real service would need maker-approved patterns, material allocation across concepts, payments/refunds, deadline and cancellation handling, verified stock and cost accounting. No real payments are collected. Votes, reservations and orders are deliberately simulated independently per concept for demonstration.
+Maker minima are assumed constants: Tote 42, Sleeve 32, Jacket 20. **These are production minimums, not break-even calculations.** A concept below its minimum cannot launch or accept reservations/pre-orders and receives no seeded orders. A confirmed order cannot exceed capacity.
 
-Product photography is AI-generated concept imagery, not a photograph of a verified manufactured sample.
+Gross sales = confirmed order count × suggested price. Maximum potential gross sales = material capacity × suggested price, conditional on selling all units. At the default unlock, `42 × 49 = SGD 2,058`; maximum `68 × 49 = SGD 3,332`.
 
-## Technical stack
+Production cost shown is only an estimate for the displayed number of units. Setup, logistics, platform fees, returns and other costs are excluded. **No profit is calculated or claimed.**
 
-- Next.js 16 App Router, React 19, TypeScript
-- Tailwind CSS 4 and shared custom design tokens
-- Lucide React icons
-- Local typed mock data (no Supabase credentials required)
-- Static export for portable deployment
+## Explainable route scoring
 
-An optional feature-detected WebMCP navigation tool exposes the same workflow stages in supported browsers. It is not required for ordinary use.
+Each route returns a `score`, `factors`, `explanation`, financial estimate and viability flag. Six ratings on a 0–100 scale are weighted, each contribution rounded to two decimals, summed and rounded to an integer:
 
-## Accessibility
+| Factor | Weight | Rating basis |
+|---|---:|---|
+| Expected value recovery | 30% | Route gross value / highest route gross value × 100 |
+| Estimated waste avoidance | 20% | Assumed sell-through × retained material fraction |
+| Material utilisation | 15% | Resale 100, repair 95, calculated Remix design yield, recycling 90 |
+| Processing ease | 10% | Resale 100, repair 65, Remix 45, recycling 85 |
+| Lower production / sales risk | 10% | Assumed route demand percentage; recycling 95 |
+| Estimated demand | 15% | Condition-specific assumed demand; recycling 95 |
 
-Semantic forms, required fields and numeric constraints, keyboard focus styles, labelled progress bars, product image descriptions, dialog focus trapping, Escape dismissal, live status notifications and reduced-motion support. Layout adapts from desktop to mobile.
+Gross value formulas:
 
-## Future production architecture
+- Resale: quantity × original price × clearance price retention × resale demand.
+- Repair: quantity × original price × repaired price retention × repaired demand.
+- Remix: calculated Tote capacity × suggested Tote price × assumed Remix demand.
+- Recycling: available kg × material fibre value/kg (cotton SGD 1.4; blend SGD 0.7).
 
-A future Supabase backend can store brands, batches, concepts, drops, interactions, pre-orders and material allocations. Trusted server-side transactions would enforce allocation and order limits; authenticated brand access, payment webhooks and maker approvals must be implemented before operating a marketplace.
+| Condition | Resale demand | Repair demand | Remix demand | Clearance price retention | Repair price retention |
+|---|---:|---:|---:|---:|---:|
+| Minor defects | 12% | 20% | 88% | 25% | 45% |
+| Good condition | 90% | 80% | 65% | 65% | 65% |
+| Broken fastenings | 8% | 88% | 65% | 15% | 70% |
+| Damaged panels | 2% | 4% | 82% | 10% | 30% |
+| Fibre only | 0% | 0% | 0% | 0% | 0% |
+
+Waste avoidance ratings: resale = demand × 100; repair = demand × 95; Remix = demand × calculated utilisation; recycle = 90. These illustrative ratings do not prove disposal avoidance, lifecycle benefit or mass balance. They intentionally favour preserving existing products where feasible. Demand and risk are correlated assumptions, not independent evidence.
+
+Viability gates: resale demand ≥10%; repair demand ≥15%; Remix positive assumed demand and capacity ≥42; recycling positive available kg. Resale and repair also require a positive item count. The highest-scoring viable resale/repair/Remix route wins. Recycling is only recommended when those routes fail; a high recycling score cannot override a viable higher-value pathway. Zero-stock input returns no recommendation.
+
+The default recommends Remix. Good condition recommends resale, broken fastenings recommends repair, and fibre-only stock recommends recycling. Route comparison is based on a Tote scenario before concept selection; that is identified in the explanation and is not recomputed as a different product's route value.
+
+## Verification
+
+The automated engine tests cover default capacities and recommendation, exact unlock arithmetic, half/double quantities, insufficient stock, changing condition/material/price, missing/zero/excessive material, score reconstruction and a single selected material allocation.
+
+Manual browser checks cover the complete default workflow, expandable explanations, inventory edits and resulting figures, desktop/mobile layouts, checkout confirmation and reset.
+
+## Stack and accessibility
+
+Next.js App Router, React, TypeScript, Tailwind CSS 4, custom shared design tokens and Lucide icons. Existing generated product concept photography and premium retail design are retained. Responsive layouts, semantic forms and native details controls, keyboard focus styling, dialog focus trapping, labelled progress bars, live status messages, reduced-motion support and reset remain available.
+
+An optional feature-detected WebMCP tool navigates the same workflow stages. It performs no payments or external writes. This MVP has no authentication, persistent multi-user state, payment collection or actual manufacturing.

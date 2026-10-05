@@ -1,17 +1,28 @@
-export type Batch = { product:string; quantity:number; material:string; condition:string; price:number; weight:number };
+export type Material = 'Cotton Denim' | 'Cotton Blend Denim';
+export type Condition = 'Unsold / Minor Defects' | 'Unsold / Good Condition' | 'Repairable / Broken Fastenings' | 'Damaged / Reusable Panels' | 'Unusable / Fibre Recovery Only';
+export type Batch = { product:string; quantity:number; material:Material; condition:Condition; price:number; weight:number|null };
 export const defaultBatch:Batch = {product:'Denim Jeans',quantity:180,material:'Cotton Denim',condition:'Unsold / Minor Defects',price:69,weight:142};
-export const routes = [
- {name:'Clearance',value:2160,recovery:100,cost:180,risk:'Low',score:62,description:'Keep the original product in use. Best for inventory with existing resale demand.'},
- {name:'Repair + Resell',value:3050,recovery:76,cost:720,risk:'Medium',score:74,description:'Restore function and extend product life when defects are economically repairable.'},
- {name:'Remix',value:4380,recovery:86,cost:1440,risk:'Medium',score:89,description:'Reusable denim and simple construction make this batch a candidate for a demand-tested remake.'},
- {name:'Recycling',value:620,recovery:91,cost:120,risk:'Low',score:51,description:'Recover fibres when keeping products or reusable panels in circulation is not feasible.'}
-];
-export const concepts = [
- {id:'tote',name:'Denim Tote',subtitle:'Your everyday carry. Reimagined.',max:68,cost:18,price:49,utilisation:84,difficulty:'Low',votes:382,reservations:71,preorders:41,threshold:42,position:'0%',reason:'Large reusable denim panels, a simple pattern, and versatile everyday use make this our lead concept.'},
- {id:'sleeve',name:'Laptop Sleeve',subtitle:'A softer landing for your essentials.',max:92,cost:14,price:35,utilisation:77,difficulty:'Low',votes:290,reservations:43,preorders:25,threshold:32,position:'50%',reason:'Compact panels accommodate smaller offcuts, with low assembly complexity and an accessible price.'},
- {id:'jacket',name:'Patchwork Jacket',subtitle:'Different pieces. One of a kind.',max:31,cost:42,price:95,utilisation:90,difficulty:'High',votes:195,reservations:18,preorders:11,threshold:20,position:'100%',reason:'Patchwork accepts varied denim shades and sizes, but requires more skilled sewing and quality checks.'}
+export const materials:Material[]=['Cotton Denim','Cotton Blend Denim'];
+export const conditions:Condition[]=['Unsold / Minor Defects','Unsold / Good Condition','Repairable / Broken Fastenings','Damaged / Reusable Panels','Unusable / Fibre Recovery Only'];
+// Prototype assumptions, not measured observations or trained predictions.
+export const materialProfiles = {
+ 'Cotton Denim':{yield:1,cost:1,price:1,recyclePrice:1.4},
+ 'Cotton Blend Denim':{yield:0.85,cost:1.1,price:0.95,recyclePrice:0.7}
+};
+export const conditionProfiles = {
+ 'Unsold / Minor Defects':{panels:1,resellDemand:0.12,repairDemand:0.2,remixDemand:0.88,clearancePrice:0.25,repairPrice:0.45,repairCost:5,remixCost:1},
+ 'Unsold / Good Condition':{panels:1,resellDemand:0.9,repairDemand:0.8,remixDemand:0.65,clearancePrice:0.65,repairPrice:0.65,repairCost:4,remixCost:1},
+ 'Repairable / Broken Fastenings':{panels:0.95,resellDemand:0.08,repairDemand:0.88,remixDemand:0.65,clearancePrice:0.15,repairPrice:0.7,repairCost:6,remixCost:1.1},
+ 'Damaged / Reusable Panels':{panels:0.7,resellDemand:0.02,repairDemand:0.04,remixDemand:0.82,clearancePrice:0.1,repairPrice:0.3,repairCost:14,remixCost:1.2},
+ 'Unusable / Fibre Recovery Only':{panels:0,resellDemand:0,repairDemand:0,remixDemand:0,clearancePrice:0,repairPrice:0,repairCost:20,remixCost:1.5}
+};
+export const conceptTemplates = [
+ {id:'tote',name:'Denim Tote',subtitle:'Your everyday carry. Reimagined.',inputKg:142/68,baseCost:18,basePrice:49,baseUtilisation:84,difficulty:'Low',votes:382,reservations:71,seedOrders:41,threshold:42,position:'0%',reason:'Large reusable panels and a simple pattern suit an everyday carry.'},
+ {id:'sleeve',name:'Laptop Sleeve',subtitle:'A softer landing for your essentials.',inputKg:142/92,baseCost:14,basePrice:35,baseUtilisation:77,difficulty:'Low',votes:290,reservations:43,seedOrders:25,threshold:32,position:'50%',reason:'Compact patterns accommodate smaller panels with relatively simple assembly.'},
+ {id:'jacket',name:'Patchwork Jacket',subtitle:'Different pieces. One of a kind.',inputKg:142/31,baseCost:42,basePrice:95,baseUtilisation:90,difficulty:'High',votes:195,reservations:18,seedOrders:11,threshold:20,position:'100%',reason:'Patchwork accepts varied shades, but needs skilled sewing and quality checks.'}
 ] as const;
-export type Concept = typeof concepts[number];
-export const initialDemand = () => Object.fromEntries(concepts.map(c=>[c.id,{votes:c.votes as number,reservations:c.reservations as number,preorders:c.preorders as number,voted:false,reserved:false,ordered:false}]));
-export type Demand = ReturnType<typeof initialDemand>;
-export const money=(value:number)=>`SGD ${value.toLocaleString('en-SG')}`;
+export type ConceptId=typeof conceptTemplates[number]['id'];
+export type DemandEntry={votes:number;reservations:number;preorders:number;voted:boolean;reserved:boolean;ordered:boolean};
+export type Demand=Record<ConceptId,DemandEntry>;
+export const initialDemand=(concepts:readonly {id:ConceptId;max:number}[],selected:ConceptId='tote'):Demand=>Object.fromEntries(conceptTemplates.map(c=>[c.id,{votes:c.votes,reservations:c.reservations,preorders:c.id===selected&&(concepts.find(x=>x.id===c.id)?.max??0)>=c.threshold?c.seedOrders:0,voted:false,reserved:false,ordered:false}])) as Demand;
+export const money=(value:number)=>`SGD ${value.toLocaleString('en-SG',{maximumFractionDigits:2})}`;
