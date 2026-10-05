@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {ArrowUpRight,Check,CheckCircle2,ChevronRight,Heart,Layers3,Package,Plus,RotateCcw,Scissors,Sparkles,TrendingUp,X,Zap} from 'lucide-react';
+import {Check,CheckCircle2,ChevronRight,Heart,Layers3,Package,RotateCcw,Scissors,Sparkles,TrendingUp,X,Zap} from 'lucide-react';
 import {Batch,concepts,defaultBatch,initialDemand,money,routes} from '@/lib/mock-data';
 import {ProductImage,Progress,SectionTitle} from './ui';
 type Stage='inventory'|'routes'|'concepts'|'drop'|'impact';
@@ -31,9 +31,9 @@ export default function RemixApp(){
   if(id==='tote'&&kind==='preorders'&&demand.tote.preorders===41){setCelebrate(true);}else setNotice(kind==='votes'?'Your vote is in. Thanks for shaping this drop.':kind==='reservations'?'Spot reserved in this demo. No payment taken.':'Demo pre-order confirmed. No payment taken.');
  };
  useEffect(()=>{
-  const doc=document as Document&{modelContext?:{registerTool:(tool:unknown,options:unknown)=>void}};
+  const doc=document as Document&{modelContext?:{registerTool:(tool:unknown,options:unknown)=>void|Promise<void>}};
   if(!doc.modelContext)return;const controller=new AbortController();
-  try{doc.modelContext.registerTool({name:'navigate_remix_demo',description:'Open a Remix Drop demo workflow stage.',inputSchema:{type:'object',properties:{stage:{type:'string',enum:steps}},required:['stage'],additionalProperties:false},annotations:{readOnlyHint:false},execute:(input:unknown)=>{const value=(input as {stage?:Stage})?.stage;if(!value||!steps.includes(value))throw new Error('Invalid stage');setStage(value);return {stage:value};}},{signal:controller.signal});}catch{/* Optional browser capability. */}
+  try{void Promise.resolve(doc.modelContext.registerTool({name:'navigate_remix_demo',description:'Open a Remix Drop demo workflow stage.',inputSchema:{type:'object',properties:{stage:{type:'string',enum:steps}},required:['stage'],additionalProperties:false},annotations:{readOnlyHint:false},execute:(input:unknown)=>{const value=(input as {stage?:Stage})?.stage;if(!value||!steps.includes(value))throw new Error('Invalid stage');setStage(value);window.scrollTo({top:0,behavior:'smooth'});return {stage:value};}},{signal:controller.signal})).catch(()=>{/* Optional browser capability may be cancelled on unmount. */});}catch{/* Optional browser capability. */}
   return()=>controller.abort();
  },[]);
  return <><header className="header"><button className="logo" onClick={()=>go('inventory')} aria-label="Remix Drop home"><span className="logo-mark">r.</span>remix<span className="logo-light">drop</span><span className="logo-dot"/></button><nav aria-label="Main navigation"><button className={stage!=='drop'?'active':''} onClick={()=>go('inventory')}>Brand studio</button><button className={stage==='drop'?'active':''} onClick={()=>go('drop')}>Explore the drop</button></nav><div className="header-right"><span className="demo-tag">INTERACTIVE DEMO</span><button className="icon-button" onClick={reset} title="Reset demo" aria-label="Reset demo"><RotateCcw size={17}/></button><span className="avatar">RD</span></div></header>
