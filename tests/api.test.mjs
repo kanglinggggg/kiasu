@@ -52,7 +52,7 @@ test("independent cookie sessions share committed state and reject duplicate HTT
   assert.equal(duplicateReserve.status, 409);
   assert.equal(
     (await b("snapshot")).body.drops.find((x) => x.id === d.id).allocated_kg,
-    67.2,
+    41.2,
   );
   const received = await Promise.all([
     a(`returns/${ret.body.id}/receive`, {}),
@@ -85,7 +85,7 @@ test("independent cookie sessions share committed state and reject duplicate HTT
   assert.deepEqual(orders.map((x) => x.status).sort(), [200, 409]);
   const ready = (await b("snapshot")).body.drops.find((x) => x.id === d.id);
   assert.equal(ready.orders, 42);
-  assert.equal(ready.allocated_kg, 68);
+  assert.equal(ready.allocated_kg, 42);
   assert.equal(ready.gross_sales, 2058);
   assert.equal((await b(`drops/${d.id}/unlock`, {})).status, 200);
   assert.equal((await a("snapshot")).body.production[0].confirmed_units, 42);

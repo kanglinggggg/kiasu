@@ -47,10 +47,10 @@ Both web scripts bind to 127.0.0.1. Integration tests create isolated workspaces
 ## Three-minute demo
 
 1. Remain **Demo Operator** and select **Scan an item**. Optional Demo AI identifies a damaged pair of Cotton Denim jeans; review type, condition and usage. Confirm the item. Good wearable clothing instead recommends Keep & Restyle, repair or reuse.
-2. Match the default 0.8 kg estimate to **Drop #024, Denim Utility Bag**. It has 41 confirmed simulated preorders and 67.2 kg allocated verified-in-demo material. Multiple active drops are evaluated with deterministic compatibility rules.
-3. Reserve a mock collection point. **Reservation adds no material or reward.** Simulate receipt, explicitly simulate inspection, then allocate accepted material to the drop. These are separate persisted operations. Accepted verification issues 100 base + 80 demand-bonus credits once; allocation raises material to 68 kg while demand remains 41/42.
-4. Confirm the 42nd simulated preorder. Both gates are ready. The Demo Operator requests the server unlock; **DROP UNLOCKED** and impact show 42 buyers, 68 kg allocated material, capacity 68 and **SGD 2,058 committed gross sales**.
-5. Optionally approve, start and complete the planned 42-unit production. The recipe consumes 42 kg; **26 kg enters the future material pool** as traceable residual sources. Use Brand Studio's material ledger to allocate them to a later compatible drop.
+2. Match the default 0.8 kg estimate to **Drop #024, Denim Utility Bag**. It has 41 confirmed simulated preorders and 41.2 kg allocated verified-in-demo material. Multiple active drops are evaluated with deterministic compatibility rules.
+3. Reserve a mock collection point. **Reservation adds no material or reward.** Simulate receipt, explicitly simulate inspection, then allocate accepted material to the drop. These are separate persisted operations. Accepted verification issues 100 base + 80 demand-bonus credits once; allocation raises material to 42 kg while demand remains 41/42.
+4. Confirm the 42nd simulated preorder. Both gates are ready. The Demo Operator requests the server unlock; **DROP UNLOCKED** and impact show 42 buyers, 42 kg allocated material, a 42-unit plan and a waste-defined maximum of 68 and **SGD 2,058 committed gross sales**.
+5. Optionally approve, start and complete the planned 42-unit production. The recipe consumes all 42 kg of allocated denim. Any explicitly over-allocated fabric and unused auxiliaries become traceable residual sources for later compatible drops.
 6. Reload or change local identity. Wardrobe, returns, contributions, preorders, reward entries, production and inventory balances remain stored. A consumer can contribute and preorder; a brand user approves production. Only the combined Demo Operator role auto-requests unlock for the short presentation.
 
 Reverse steps 3 and 4 to show that demand alone cannot unlock production. All inspection, payment and manufacturing actions remain clearly simulated; no physical collection, voucher or payment service is contacted.
@@ -61,7 +61,7 @@ B017 is a **separate** 180-jean / 142 kg brand-demo batch, fully assigned to the
 
 Editing quantity, price, material, condition or weight updates deterministic estimates. Saving corrected inputs creates a **new batch**, preserving old orders and allocations. Generate proposals, confirm the separate inventory inspection and launch a supported concept. New drops start at **zero observed demand**, never fabricated 41-order history. The database refuses reuse of already allocated material. The interface separates estimated potential from available verified kilograms.
 
-The consumer-loop batch D102 contains 180 jeans and 142 kg verified-in-demo material: 60 kg allocated to #024, 82 kg remaining. Nine earlier consumer receipts contribute 7.2 kg. The default new receipt contributes another 0.8 kg. B017 does not reuse D102's material.
+The consumer-loop batch D102 contains 180 jeans and 142 kg verified-in-demo material: 34 kg allocated to #024, 108 kg remaining. Nine earlier consumer receipts contribute 7.2 kg. The default new receipt contributes another 0.8 kg. B017 does not reuse D102's material.
 
 ## Architecture and data
 
@@ -92,9 +92,9 @@ The optional **Accounting controls** panel supports preorder cancellation/refund
 
 The Utility Bag BOM keeps its 1 kg recovered-denim allowance and adds separately tracked lining (0.18 kg), zipper (1 each) and hardware (2 each). Calibrated simulated supplier stock supports 68 units. Every required component must be ready. Inspections record controlled quality attributes; A/B fabric can match the Utility Bag, while the Pouch also accepts C. AI never sets verified quality.
 
-Completion reconciles **allocated = consumed + recoverable residual + non-recoverable residual**, within 0.001 kg. Process scrap is included within residuals, never double-counted. Default recovered denim still gives 68 = 42 + 26 kg; including auxiliaries, total mass is 81.6 = 50.4 + 31.2 kg. No environmental benefit is inferred.
+Completion reconciles **allocated = consumed + recoverable residual + non-recoverable residual**, within 0.001 kg. Process scrap is included within residuals, never double-counted. Default recovered denim gives 42 = 42 + 0 kg; the seeded auxiliaries still support 68 units, so total mass is 55.6 = 50.4 + 5.2 kg. Allocating an extra 26 kg for a residual-accounting scenario gives 81.6 = 50.4 + 31.2 kg. No environmental benefit is inferred.
 
-See [reversal accounting, lifecycle, BOM, quality, mass balance and invariants](docs/accounting.md). Original workflows and tests remain in place. The headline is unchanged: **67.2 + 0.8 kg, 41 + 1 orders, SGD 2,058**.
+See [reversal accounting, lifecycle, BOM, quality, mass balance and invariants](docs/accounting.md). Original workflows and tests remain in place. The fresh demo is **41.2 + 0.8 = 42 kg, 41 + 1 orders, SGD 2,058**, with **68** retained as the maximum, not the unlock target.
 
 ## AI and human review
 
@@ -123,3 +123,11 @@ Existing 23 engine/AI/loop unit tests remain intact. PostgreSQL integration test
 The local browser regression covers the brand route/concept/drop flow, consumer receipt/inspection/allocation/preorder flow, reload persistence, dynamic quantity and responsive desktop/mobile layouts. No authentication provider, payment provider or external publishing is used.
 
 Next.js, React, TypeScript, Tailwind CSS, Zod and PostgreSQL (`pg`). Existing product imagery, editorial layout, accessible labels/progress, keyboard dialog focus, reduced motion, workflow navigation and reset are retained.
+
+## Planned quantity and material readiness
+
+Before commitment, planned units are `max(minimum viable batch, confirmed preorders)`. For the Utility Bag this means at least 42 units; 50 confirmed orders require inputs for 50 units. Every recovered and auxiliary component must cover `planned units × recipe allowance`, rounded up to the ledger precision. The plan is never reduced to fit missing material. All confirmed demand must fit verified component capacity before unlock.
+
+After unlock, the production run fixes the planned units. Approval and start recheck that quantity against current confirmed demand and every BOM component. Cancellation/release can invalidate an unapproved run through the existing reversal workflow; started runs require explicit reconciliation.
+
+The UI separates required input for the plan, current verified production capacity, and the waste-defined maximum (68 for the Utility Bag). Matching and demand bonuses use the planned shortage, not the gap to 68. Old workspaces with 67.2 kg are already material-ready for 42 units; migration 011 changes calculations without editing their ledger history. Use Reset demo to create the new 41.2 kg scenario.

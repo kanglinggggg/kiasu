@@ -7,6 +7,7 @@ export type Requirement = {
   component: string;
   material_type: string;
   minimum_kg: number;
+  required_kg: number;
   maximum_kg: number;
   kg_per_unit: number;
   allowed_blend: boolean;
@@ -37,11 +38,14 @@ export type StoredDrop = {
     available: number;
     capacity: number;
     ready: boolean;
+    required_quantity: number;
   }[];
   orders: number;
   votes: number;
   reservations: number;
   capacity: number;
+  maximum_capacity: number;
+  planned_units: number;
   allocated_kg: number;
   demand_ready: boolean;
   material_ready: boolean;

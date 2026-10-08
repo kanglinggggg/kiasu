@@ -62,4 +62,4 @@ Viability gates: resale demand ≥10%; repair demand ≥15%; Remix positive assu
 The default recommends Remix. Good condition recommends resale, broken fastenings recommends repair, and fibre-only stock recommends recycling. Route comparison is based on a Tote scenario before concept selection; that is identified in the explanation and is not recomputed as a different product's route value.
 
 
-The seeded Utility Bag uses a separate 1 kg/unit recipe and a 68 kg material gate. Its 42-unit production consumes 42 kg and returns 26 kg to the future pool. Compatibility scores are classification rules, not a second material-yield multiplier.
+The seeded Utility Bag uses a separate 1 kg/unit recipe and a material gate equal to planned units × 1 kg, starting at 42 kg. Its fresh 42-unit production consumes 42 kg from 42 kg allocated. If an operator explicitly allocates 68 kg, the same production returns 26 kg to the future pool. The 68-unit maximum does not set the readiness threshold. Compatibility scores are classification rules, not a second material-yield multiplier.

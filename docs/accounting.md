@@ -48,14 +48,14 @@ The calibrated Utility Bag BOM is:
 
 | Component | Per product | Source | Seed reservation |
 |---|---:|---|---:|
-| Cotton Denim | 1 kg | recovered fabric | 67.2 → 68 kg |
+| Cotton Denim | 1 kg | recovered fabric | 41.2 → 42 kg |
 | Lining | 0.18 kg | simulated supplier | 12.24 kg |
 | Zipper | 1 each, 0.01 kg each | simulated supplier | 68 each |
 | Hardware | 2 each, 0.005 kg each | simulated supplier | 136 each |
 
 The 1 kg recovered-denim allowance preserves the existing calibrated demo; it is not a validated cutting pattern. Auxiliary stock is not counted as recovered denim. Supplier and residual stock can be reserved separately through optional accounting controls. A source cannot supply multiple drops with the same units. Each-based inputs must be integers.
 
-`capacity = MIN(FLOOR(available component / per-product requirement))` across recovered **and** auxiliary components. Every required component must reach its minimum before production. Confirmed demand must fit capacity. The recovered-denim minimum remains **68 kg**; auxiliary minima cover the **42-order** maker minimum. Supplier seed availability supports at most 68 products, retaining the headline capacity.
+`capacity = MIN(FLOOR(available component / per-product requirement))` across recovered **and** auxiliary components. Every required component must cover the **planned quantity**, not maximum stock. Before commitment, `planned units = max(maker minimum, confirmed orders)`; the Utility Bag starts at 42. After commitment, the active immutable production run determines planned units. For 42 units: 42 kg denim, 7.56 kg lining, 42 zippers and 84 hardware pieces. For 50 units: 50 kg denim, 9 kg lining, 50 zippers and 100 hardware pieces. Required kg is rounded up to 0.001 kg. Confirmed demand must fit verified capacity. Maximum recovered-material allowances preserve the 68-unit batch ceiling, independently of readiness. The legacy `minimum_kg` column is retained for compatibility but is no longer a readiness gate; `required_kg` and auxiliary `required_quantity` are derived. PostgreSQL `component_readiness.minimum_quantity` also derives the planned requirement.
 
 Existing historical/started runs are not retroactively given extra physical inputs. The migration adds auxiliary requirements and labelled simulated stock only to eligible existing demo drops. New seeded runs always include the full BOM. Newly generated non-Utility recipes retain their explicit registered recovered-material BOM; additional real manufacturer specifications remain future work.
 
@@ -88,11 +88,11 @@ Tolerance is **0.001 kg**. PostgreSQL compares the statement with the actual com
 
 Default complete run:
 
-- Recovered fabric: 68 kg input = 42 kg consumed + 26 kg recoverable residual.
+- Recovered fabric: 42 kg input = 42 kg consumed + 0 kg recoverable residual.
 - Auxiliaries: 13.6 kg input = 8.4 kg consumed + 5.2 kg reusable stock.
-- Total: **81.6 = 50.4 + 31.2 + 0 kg**.
+- Total: **55.6 = 50.4 + 5.2 + 0 kg**.
 
-With 3 kg explicitly declared scrap, including 2 kg non-recoverable:
+In a separate surplus test, explicitly allocate 26 kg extra denim before unlock. With 3 kg declared scrap, including 2 kg non-recoverable:
 
 - Total: **81.6 = 50.4 + 29.2 + 2 kg**.
 - Scrap 3 kg is included inside the two residual categories.
@@ -137,3 +137,9 @@ New reversal/redemption/supply operations require `{ requestKey: UUID, reason: s
 - Idempotent command keys, transactional rollback and audit history.
 
 The app remains a localhost demo with simulated identity selection. These accounting controls improve internal integrity; they do not supply production authentication, legal return policies, actual supplier verification or a validated manufacturing model.
+
+## Readiness migration
+
+Migration 011 replaces production guards and the component-readiness view. It never modifies committed allocations, receipts, rewards or historical run quantities. New demo seeds allocate 34 kg from D102 plus 7.2 kg from previous returns. A verified 0.8 kg return supplies the 42-unit plan. Existing 67.2 kg allocations already satisfy that plan and must not advertise a further shortage. Matching/rewards use the plan shortage; extra allocations up to material maximum remain possible for explicit surplus/residual scenarios.
+
+Production planning commits all current confirmed orders, with at least the maker minimum. Supplying a smaller `units` value cannot bypass an unmet plan. PostgreSQL independently rejects such inserts. A cancellation before commitment recalculates the target; after commitment it does not silently resize a run. Both approval and start check the fixed run quantity against each BOM component.

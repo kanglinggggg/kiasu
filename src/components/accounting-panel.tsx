@@ -232,7 +232,7 @@ export function AccountingPanel({
                 {d.auxiliary.map((r) => {
                   const missing = Math.max(
                       0,
-                      Math.round((r.per_unit * 68 - r.available) * 1000) / 1000,
+                      Math.round((r.required_quantity - r.available) * 1000) / 1000,
                     ),
                     stock = data.auxiliarySources.find(
                       (s) =>
@@ -257,7 +257,7 @@ export function AccountingPanel({
                           })
                         }
                       >
-                        Simulate verified supplier receipt for 68-unit BOM
+                        Simulate supplier receipt for the planned batch
                       </button>
                       {stock && (
                         <button

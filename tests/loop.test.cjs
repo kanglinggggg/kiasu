@@ -44,27 +44,27 @@ test('AI fields cannot override mass, rewards, capacity or unlock',()=>{
  assert.deepEqual(confirmItem(injected),defaultItem);assert.equal(recoverableKg(injected),.8);
  let state=createLoopState(defaultBatch);state=reserveItem(state,injected,'NUS UTown');
  assert.equal(state.reservation.credits,180);assert.equal(state.reservation.estimatedKg,.8);
- state=confirmReceipt(state);assert.equal(loopCapacity(state.pool),68);assert.equal(loopSummary(state.pool,state.orders).unlocked,false);
+ state=confirmReceipt(state);assert.equal(loopCapacity(state.pool),42);assert.equal(loopSummary(state.pool,state.orders).unlocked,false);
 });
 test('dual gate is independent; invalid or overcapacity commitments fail closed',()=>{
- const base={preorders:41,preorderThreshold:42,recoveredKg:67.2,materialThresholdKg:68,capacity:67};
+ const base={preorders:41,preorderThreshold:42,recoveredKg:41.2,kgPerUnit:1,capacity:41};
  assert.equal(calculateUnlock(base).unlocked,false);
  const demand=calculateUnlock({...base,preorders:42});assert.equal(demand.demandReady,true);assert.equal(demand.materialReady,false);assert.equal(demand.unlocked,false);
- const material=calculateUnlock({...base,recoveredKg:68,capacity:68});assert.equal(material.demandReady,false);assert.equal(material.materialReady,true);assert.equal(material.unlocked,false);
- assert.equal(calculateUnlock({...base,preorders:42,recoveredKg:68,capacity:68}).unlocked,true);
- assert.equal(calculateUnlock({...base,preorders:69,recoveredKg:68,capacity:68}).unlocked,false);
+ const material=calculateUnlock({...base,recoveredKg:42,capacity:68});assert.equal(material.demandReady,false);assert.equal(material.materialReady,true);assert.equal(material.unlocked,false);
+ assert.equal(calculateUnlock({...base,preorders:42,recoveredKg:42,capacity:68}).unlocked,true);
+ assert.equal(calculateUnlock({...base,preorders:69,recoveredKg:42,capacity:68}).unlocked,false);
  assert.equal(calculateUnlock({...base,recoveredKg:NaN}).unlocked,false);
 });
 test('default reservation adds no mass; receipt adds 0.8 once; 42nd order unlocks SGD 2058',()=>{
  let state=createLoopState(defaultBatch);
- assert.equal(loopSummary(state.pool,state.orders).kg,67.2);
- state=reserveItem(state,defaultItem,'NUS UTown');assert.equal(state.reservation.status,'Reserved');assert.equal(loopSummary(state.pool,state.orders).kg,67.2);
+ assert.equal(loopSummary(state.pool,state.orders).kg,41.2);
+ state=reserveItem(state,defaultItem,'NUS UTown');assert.equal(state.reservation.status,'Reserved');assert.equal(loopSummary(state.pool,state.orders).kg,41.2);
  assert.equal(completeLoop(state).completed,false);
- state=confirmReceipt(state);assert.equal(state.reservation.status,'Received');assert.equal(loopSummary(state.pool,state.orders).kg,68);
+ state=confirmReceipt(state);assert.equal(state.reservation.status,'Received');assert.equal(loopSummary(state.pool,state.orders).kg,42);
  assert.deepEqual(confirmReceipt(state),state);assert.equal(loopSummary(state.pool,state.orders).unlocked,false);
- state=placeLoopOrder(state);const summary=loopSummary(state.pool,state.orders);assert.equal(summary.unlocked,true);assert.equal(summary.grossSales,2058);assert.equal(summary.capacity,68);assert.deepEqual(placeLoopOrder(state),state);
- state=completeLoop(state);const completed=loopSummary(state.pool,state.orders,state.completed);assert.equal(completed.produced,42);assert.equal(completed.residualKg,26);assert.equal(completed.communityReturns,10);
- assert.equal(state.pool.filter(p=>p.source==='brand_surplus')[0].kg,60);assert.equal(state.pool.filter(p=>p.source==='consumer_return').reduce((n,p)=>n+p.kg,0),8);
+ state=placeLoopOrder(state);const summary=loopSummary(state.pool,state.orders);assert.equal(summary.unlocked,true);assert.equal(summary.grossSales,2058);assert.equal(summary.capacity,42);assert.deepEqual(placeLoopOrder(state),state);
+ state=completeLoop(state);const completed=loopSummary(state.pool,state.orders,state.completed);assert.equal(completed.produced,42);assert.equal(completed.residualKg,0);assert.equal(completed.communityReturns,10);
+ assert.equal(state.pool.filter(p=>p.source==='brand_surplus')[0].kg,34);assert.equal(state.pool.filter(p=>p.source==='consumer_return').reduce((n,p)=>n+p.kg,0),8);
 });
 test('reverse sequence waits for material and unsafe returns cannot reserve',()=>{
  let state=placeLoopOrder(createLoopState(defaultBatch));assert.equal(state.orders,42);assert.equal(loopSummary(state.pool,state.orders).unlocked,false);
@@ -73,7 +73,7 @@ test('reverse sequence waits for material and unsafe returns cannot reserve',()=
  state=confirmReceipt(reserveItem(state,defaultItem,'NUS UTown'));assert.equal(loopSummary(state.pool,state.orders).unlocked,true);
 });
 test('brand material and next batch stay capacity constrained',()=>{
- const empty=createLoopState({...defaultBatch,quantity:0,weight:0});assert.equal(loopCapacity(empty.pool),7);assert.equal(placeLoopOrder(empty).orders,41);assert.equal(loopSummary(empty.pool,41).unlocked,false);
+ const empty=createLoopState({...defaultBatch,quantity:0,weight:0});assert.equal(loopCapacity(empty.pool),7);assert.equal(placeLoopOrder(empty).orders,42);assert.equal(loopSummary(empty.pool,41).unlocked,false);
  const d=demandIntelligence(empty.pool,41);assert.equal(d.nextBatch,7);
  const full=createLoopState(defaultBatch);assert.equal(demandIntelligence(full.pool,41).nextBatch,41);
  assert.equal(createLoopState({...defaultBatch,material:'Cotton Blend Denim'}).pool[0].kg,0);
@@ -82,4 +82,16 @@ test('brand material and next batch stay capacity constrained',()=>{
 test('wardrobe AI mock suggests classification only and supports wearable jacket',async()=>{
  const s=await suggestWardrobe('demo','A cotton denim jacket in good condition. Rarely worn.');
  assert.equal(s.type,'Denim Jacket');assert.equal(s.condition,'Good');assert.equal(s.material,'Cotton Denim');assert.equal(s.estimatedRecoverableKg,undefined);assert.equal(s.credits,undefined);
+});
+
+test('planned material follows demand and does not wait for the full batch cap',()=>{
+ const base={preorders:42,preorderThreshold:42,recoveredKg:42,kgPerUnit:1,capacity:68};
+ assert.equal(calculateUnlock(base).unlocked,true);
+ assert.equal(calculateUnlock({...base,recoveredKg:67.2}).unlocked,true);
+ assert.equal(calculateUnlock({...base,preorders:50,recoveredKg:49.9}).materialReady,false);
+ assert.equal(calculateUnlock({...base,preorders:50,recoveredKg:50}).requiredKg,50);
+ assert.equal(calculateUnlock({...base,preorders:41}).unlocked,false);
+ assert.equal(calculateUnlock({...base,plannedUnits:1}).unlocked,false);
+ assert.equal(calculateUnlock({...base,kgPerUnit:.3333,recoveredKg:13.998}).unlocked,false);
+ assert.equal(calculateUnlock({...base,kgPerUnit:.3333,recoveredKg:13.999}).unlocked,true);
 });

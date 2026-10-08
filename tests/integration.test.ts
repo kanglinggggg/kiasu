@@ -54,11 +54,11 @@ async function filled(a: Actor, drop: string) {
 test("real seed is consistent; reservation never adds material or rewards", async () => {
   const f = await fixture();
   assert.equal(f.drop.orders, 41);
-  assert.equal(f.drop.allocated_kg, 67.2);
-  assert.equal(f.batch.remaining_kg, 82);
+  assert.equal(f.drop.allocated_kg, 41.2);
+  assert.equal(f.batch.remaining_kg, 108);
   await reserved(f.admin, f.drop.id);
   const s = await snapshot(f.admin);
-  assert.equal(s.drops.find((d) => d.id === f.drop.id)!.allocated_kg, 67.2);
+  assert.equal(s.drops.find((d) => d.id === f.drop.id)!.allocated_kg, 41.2);
   assert.equal(s.balance, 0);
   assert.equal(s.returns[0].status, "reserved");
 });
@@ -132,14 +132,14 @@ test("competing allocations to different drops cannot spend the same source twic
       run(f.admin, ["drops", d.id, "allocate-material"], {
         sourceId: f.batch.source_id,
         requirementId: d.requirements[0].id,
-        kg: 50,
+        kg: 60,
         requestKey: crypto.randomUUID(),
       }),
     ),
   );
   assert.equal(calls.filter((r) => r.status === "fulfilled").length, 1);
   const s = await snapshot(f.admin);
-  assert.equal(s.batches.find((b) => b.id === f.batch.id)!.remaining_kg, 32);
+  assert.equal(s.batches.find((b) => b.id === f.batch.id)!.remaining_kg, 48);
 });
 test("same idempotency key cannot double-allocate an accepted return", async () => {
   const f = await fixture(),
@@ -161,7 +161,7 @@ test("same idempotency key cannot double-allocate an accepted return", async () 
   assert.equal(
     (await snapshot(f.admin)).drops.find((d) => d.id === f.drop.id)!
       .allocated_kg,
-    68,
+    42,
   );
 });
 test("demand-only stays locked and duplicate preorders do not inflate sales", async () => {
@@ -195,6 +195,8 @@ test("material-only stays locked; both ready unlock once and plan exactly 42 uni
 test("production rejects exceeding demand/capacity, requires approvals, and preserves 26kg residual", async () => {
   const f = await fixture();
   await filled(f.admin, f.drop.id);
+  // Explicitly reserve extra fabric to exercise residual accounting; it is not an unlock requirement.
+  await run(f.admin,["drops",f.drop.id,"allocate-material"],{sourceId:f.batch.source_id,requirementId:f.drop.requirements[0].id,kg:26,requestKey:crypto.randomUUID()});
   await run(f.admin, ["drops", f.drop.id, "preorder"]);
   await run(f.admin, ["drops", f.drop.id, "unlock"]);
   await assert.rejects(
@@ -318,14 +320,14 @@ test("database balance guard rejects direct concurrent overdraw as well as servi
   );
   assert.equal(calls.filter((r) => r.status === "fulfilled").length, 1);
   const s = await snapshot(f.admin);
-  assert.equal(s.batches.find((b) => b.id === f.batch.id)!.remaining_kg, 22);
+  assert.equal(s.batches.find((b) => b.id === f.batch.id)!.remaining_kg, 48);
 });
 test("fresh readers retain persisted orders and material, independent of React state", async () => {
   const f = await fixture();
   await filled(f.admin, f.drop.id);
   await run(f.admin, ["drops", f.drop.id, "preorder"]);
   const [a, b] = await Promise.all([snapshot(f.admin), snapshot(f.admin)]);
-  assert.equal(a.drops.find((d) => d.id === f.drop.id)!.allocated_kg, 68);
+  assert.equal(a.drops.find((d) => d.id === f.drop.id)!.allocated_kg, 42);
   assert.equal(b.drops.find((d) => d.id === f.drop.id)!.orders, 42);
   assert.equal(a.balance, b.balance);
 });
@@ -383,7 +385,7 @@ test("new brand batch scales deterministic capacity, requires verification, and 
   assert.equal(
     (await snapshot(f.admin)).batches.find((b) => b.id === f.batch.id)!
       .remaining_kg,
-    82,
+    108,
   );
 });
 
@@ -415,7 +417,7 @@ test("every component is required and an overcapacity demand state cannot unlock
     ]),
   );
   d = (await snapshot(f.admin)).drops.find((d) => d.id === f.drop.id)!;
-  assert.equal(d.capacity, 34);
+  assert.equal(d.capacity, 21);
   assert.equal(d.eligible, false);
   await assert.rejects(run(f.admin, ["drops", d.id, "unlock"]));
 });

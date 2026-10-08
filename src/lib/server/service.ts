@@ -1,3 +1,4 @@
+import { plannedQuantity, requiredMaterial } from "../unlock-engine";
 import { executeAccounting } from "./accounting";
 import { reconcileProduction } from "./production-accounting";
 import {
@@ -76,23 +77,29 @@ export async function getDrop(
   ).rows.map((r) => ({
     ...r,
     capacity: Math.floor((r.available + 1e-7) / r.per_unit),
-    ready: r.available >= r.per_unit * d.preorder_threshold,
+    ready: false,
+    required_quantity: 0,
   }));
   const counts = await one(
     c,
     `SELECT (SELECT count(*) FROM preorders WHERE drop_id=$1 AND status='confirmed') orders,(SELECT COALESCE(sum(unit_price),0) FROM preorders WHERE drop_id=$1 AND status='confirmed') gross_sales,(SELECT count(*) FROM votes WHERE drop_id=$1) votes,(SELECT count(*) FROM reservations WHERE drop_id=$1) reservations,(SELECT EXISTS(SELECT 1 FROM preorders WHERE drop_id=$1 AND user_id::text=$2 AND status='confirmed')) my_order,(SELECT status FROM preorders WHERE drop_id=$1 AND user_id::text=$2) my_preorder_status,(SELECT EXISTS(SELECT 1 FROM votes WHERE drop_id=$1 AND user_id::text=$2)) my_vote,(SELECT EXISTS(SELECT 1 FROM reservations WHERE drop_id=$1 AND user_id::text=$2)) my_reservation`,
     [id, actorId],
   );
+  const committed = (await c.query("SELECT confirmed_units FROM production_runs WHERE drop_id=$1 AND status<>'cancelled' ORDER BY created_at DESC LIMIT 1",[id])).rows[0];
+  const planned_units = plannedQuantity(counts.orders,d.preorder_threshold,committed?.confirmed_units);
+  reqs.forEach(r=>{r.required_kg=requiredMaterial(planned_units,r.kg_per_unit);});
+  auxiliary.forEach(r=>{r.required_quantity=requiredMaterial(planned_units,r.per_unit);r.ready=r.available+1e-8>=r.required_quantity;});
+  const maximum_capacity = reqs.length ? Math.min(...reqs.map(r=>Math.floor((r.maximum_kg+1e-7)/r.kg_per_unit))) : 0;
   const capacity = reqs.length
       ? Math.min(
           ...reqs.map((r) => r.capacity),
           ...auxiliary.map((r) => r.capacity),
         )
       : 0,
-    demand_ready = counts.orders >= d.preorder_threshold,
+    demand_ready = counts.orders >= planned_units,
     material_ready =
       reqs.length > 0 &&
-      reqs.every((r) => r.allocated_kg >= r.minimum_kg) &&
+      reqs.every((r) => r.allocated_kg + 1e-8 >= r.required_kg) &&
       auxiliary.every((r) => r.ready);
   const eligible = demand_ready && material_ready && counts.orders <= capacity;
   const state =
@@ -111,6 +118,8 @@ export async function getDrop(
     requirements: reqs,
     auxiliary,
     capacity,
+    maximum_capacity,
+    planned_units,
     demand_ready,
     material_ready,
     eligible,
@@ -169,7 +178,7 @@ export async function findMatches(
               ? ` Inspected grade ${inspectedQuality.quality_grade}: ${qualityReady ? "compatible" : "not compatible"}.`
               : " Provisional grade B assumption; inspected quality is checked again before allocation."),
         },
-        needed = roundKg(Math.max(0, req.maximum_kg - req.allocated_kg));
+        needed = roundKg(Math.max(0, req.required_kg - req.allocated_kg));
       results.push({
         ...match,
         dropId: drop.id,
@@ -382,7 +391,7 @@ async function inspect(
       input.kg,
       req ? compatibility(input.material, req).compatibilityScore : 0,
       drop.phase === "market_test" && req
-        ? req.maximum_kg - req.allocated_kg
+        ? req.required_kg - req.allocated_kg
         : 0,
       drop.orders,
     );
@@ -427,9 +436,9 @@ async function plan(c: PoolClient, a: Actor, dropId: string, units?: number) {
     d.phase === "unlocked" && d.eligible,
     "Unlock a valid drop before planning production.",
   );
-  const count = units ?? Math.min(d.orders, d.capacity);
+  const count = units ?? d.planned_units;
   assertDomain(
-    count <= d.orders && count <= d.capacity && count > 0,
+    count === d.planned_units && count <= d.orders && count <= d.capacity && count >= d.preorder_threshold,
     "Production cannot exceed confirmed demand or verified material capacity.",
   );
   const run = await one(
@@ -699,7 +708,7 @@ export async function execute(a: Actor, path: string[], raw: unknown) {
           d.requirements.some(
             (r) =>
               compatibility(item.estimated_material_type, r).compatible &&
-              r.allocated_kg < r.maximum_kg,
+              r.allocated_kg < r.required_kg,
           ),
         "No compatible active material need.",
       );

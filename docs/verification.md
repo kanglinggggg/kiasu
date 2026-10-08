@@ -1,3 +1,17 @@
+# Planned-quantity readiness verification — 8 October 2026
+
+Migration 011 applied without rewriting any ledger history. Typecheck, 24 unit tests, 42 PostgreSQL integration tests (including concurrency), and the independent HTTP session test passed: **67 tests** total. Production build and GitHub Pages export passed.
+
+New regression coverage checks exact 42 kg unlock, 67.2 kg already being ready for 42 units, larger demand raising every BOM target, cancellation recalculating an uncommitted target, insufficient zippers blocking a larger batch, direct PostgreSQL rejection of undersized plans, and gram rounding. Existing reversal, residual, quality and concurrency coverage is retained. Residual tests explicitly over-allocate 26 kg rather than treating it as an unlock requirement.
+
+The revised fresh demo uses 34 kg brand material + 7.2 kg earlier returns + 0.8 kg new verified return = 42 kg, with 42 confirmed orders and SGD 2,058 committed gross sales. The waste-defined maximum remains 68 units. Old 67.2 kg workspaces remain intact and already meet the initial material requirement.
+
+Browser verification: the fresh local demo displayed 41.2 / 42 kg and maximum 68 units. A separately received, inspected and allocated 0.8 kg return made material ready while demand remained 41. The 42nd preorder created a planned 42-unit run, showing 42 kg, SGD 2,058 committed sales and SGD 3,332 maximum potential sales.
+
+## Historical verification below (before migration 011)
+
+The following records describe the earlier 68 kg gate; they are retained as historical test evidence, not the current readiness specification.
+
 # Local verification — 8 October 2026
 
 - PostgreSQL migrations 001–010 applied; rerun completed safely.

@@ -722,10 +722,9 @@ export function PersistentLoop({
             <Scissors size={20} />
             <div>
               <span className="eyebrow">Waste-Defined Scarcity</span>
-              <h3>Maximum production: {d.capacity} units</h3>
+              <h3>Maximum production: {d.maximum_capacity} units</h3>
               <p>
-                Based on allocated verified material. Additional material must
-                pass inspection and allocation first.
+                The material-bounded batch cap is {d.maximum_capacity} units. Current verified inputs support {d.capacity} units. The planned batch is {d.planned_units} units.
               </p>
             </div>
           </div>
@@ -734,14 +733,14 @@ export function PersistentLoop({
             {d.auxiliary.map((r) => (
               <p key={r.id}>
                 {r.component}: {r.per_unit} {r.unit}/unit · {r.available}{" "}
-                {r.unit} reserved ·{" "}
+                {r.unit} reserved / {r.required_quantity} required for this plan ·{" "}
                 {r.ready ? "READY" : "REQUIRED COMPONENT MISSING"} ·
                 non-recovered supplier material
               </p>
             ))}
             {d.requirements.map((r) => (
               <p key={r.id}>
-                {r.component}: {r.material_type} · {r.minimum_kg}–{r.maximum_kg}{" "}
+                {r.component}: {r.material_type} · {r.required_kg} required / {r.maximum_kg} maximum{" "}
                 kg · {r.kg_per_unit} kg/unit · blends{" "}
                 {r.allowed_blend ? "allowed" : "not allowed"} · grades{" "}
                 {r.accepted_grades.join(", ")}
@@ -817,18 +816,18 @@ export function StoredReadiness({ drop: d }: { drop: StoredDrop }) {
             <strong>
               {r.component}{" "}
               <span>
-                {r.allocated_kg.toFixed(1)} / {r.minimum_kg} kg
+                {r.allocated_kg.toFixed(1)} / {r.required_kg} kg
               </span>
             </strong>
             <Progress
               value={r.allocated_kg}
-              max={r.minimum_kg}
+              max={r.required_kg}
               label={`Verified ${r.component}`}
             />
             <small>
-              {r.allocated_kg >= r.minimum_kg
+              {r.allocated_kg + 1e-8 >= r.required_kg
                 ? "MATERIAL READY ✓"
-                : `${(r.minimum_kg - r.allocated_kg).toFixed(1)} kg still needed`}
+                : `${(r.required_kg - r.allocated_kg).toFixed(1)} kg still needed`}
             </small>
           </div>
         ))}
@@ -852,7 +851,7 @@ export function StoredReadiness({ drop: d }: { drop: StoredDrop }) {
       </h3>
       <p className="fine-print">
         State: {d.state.replaceAll("_", " ")} · capacity {d.capacity} · verified
-        ledger inputs
+        ledger inputs. Planned batch: {d.planned_units} units
       </p>
     </>
   );
@@ -958,10 +957,10 @@ export function StoredImpact({
         {[
           [d.orders, "confirmed buyers"],
           [`${d.allocated_kg} kg`, "verified in demo · allocated material"],
-          [d.capacity, "maximum production"],
+          [d.maximum_capacity, "waste-defined maximum production"],
           [money(d.gross_sales), "committed gross sales"],
           [
-            money(d.capacity * d.selling_price),
+            money(d.maximum_capacity * d.selling_price),
             "maximum potential gross sales",
           ],
           [0, "speculative units produced"],

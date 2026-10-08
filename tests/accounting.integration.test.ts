@@ -55,8 +55,9 @@ async function ready(f: Awaited<ReturnType<typeof fixture>>) {
   const order = await call(f.admin, ["drops", f.drop.id, "preorder"]);
   return { r, order };
 }
-async function unlock(f: Awaited<ReturnType<typeof fixture>>) {
+async function unlock(f: Awaited<ReturnType<typeof fixture>>, extraKg=0) {
   const r = await ready(f);
+  if(extraKg) await call(f.admin,["drops",f.drop.id,"allocate-material"],{sourceId:f.batch.source_id,requirementId:f.drop.requirements[0].id,kg:extraKg,requestKey:crypto.randomUUID()});
   await call(f.admin, ["drops", f.drop.id, "unlock"]);
   return { ...r, run: (await snapshot(f.admin)).production[0] };
 }
@@ -125,7 +126,7 @@ test("cancellation invalidates an unapproved plan and releases materials, leavin
         [f.batch.source_id, d.id],
       )
     ).rows[0].quantity_kg,
-    60,
+    34,
   );
 });
 test("release restores balance without mutating original; amount and idempotency are bounded", async () => {
@@ -141,10 +142,10 @@ test("release restores balance without mutating original; amount and idempotency
   const after = await snapshot(f.admin);
   assert.equal(
     after.batches.find((b) => b.id === f.batch.id)!.remaining_kg,
-    102,
+    128,
   );
-  assert.equal(after.allocations.find((x) => x.id === a.id)!.quantity_kg, 40);
-  assert.equal(after.allocations.find((x) => x.id === a.id)!.original_kg, 60);
+  assert.equal(after.allocations.find((x) => x.id === a.id)!.quantity_kg, 14);
+  assert.equal(after.allocations.find((x) => x.id === a.id)!.original_kg, 34);
   await assert.rejects(
     pool.query(
       "UPDATE material_movements SET quantity_kg=1 WHERE id=(SELECT movement_id FROM drop_material_allocations WHERE id=$1)",
@@ -218,7 +219,7 @@ test("correction with spent reward fails atomically; reversing redemption permit
 test("BOM includes recovered fabric and auxiliary physical units; limiting component sets capacity", async () => {
   const f = await fixture();
   let d = f.drop;
-  assert.equal(d.capacity, 67);
+  assert.equal(d.capacity, 41);
   assert.equal(d.auxiliary.length, 3);
   const zipper = d.auxiliary.find((x) => x.component === "zipper")!;
   const allocation = (
@@ -291,7 +292,7 @@ test("AI cannot inject authoritative quality into consumer item confirmation", a
 });
 test("mass conservation includes auxiliaries, scrap and non-recoverable loss without claiming benefit", async () => {
   const f = await fixture(),
-    x = await unlock(f);
+    x = await unlock(f,26);
   await call(f.admin, ["production-runs", x.run.id, "approve"]);
   await call(f.admin, ["production-runs", x.run.id, "start"]);
   await call(f.admin, ["production-runs", x.run.id, "complete"], {
@@ -330,7 +331,7 @@ test("mass conservation includes auxiliaries, scrap and non-recoverable loss wit
 });
 test("out-of-range scrap rolls back completion, then default completion retains 26kg recovered residual", async () => {
   const f = await fixture(),
-    x = await unlock(f);
+    x = await unlock(f,26);
   await call(f.admin, ["production-runs", x.run.id, "approve"]);
   await call(f.admin, ["production-runs", x.run.id, "start"]);
   await assert.rejects(
@@ -379,7 +380,7 @@ test("started production never restores material on cancellation and demand chan
   await call(f.admin, ["preorders", x.order.id, "cancel"], cmd());
   const s = await snapshot(f.admin);
   assert.equal(s.production[0].status, "in_production");
-  assert.equal(s.drops.find((d) => d.id === f.drop.id)!.allocated_kg, 68);
+  assert.equal(s.drops.find((d) => d.id === f.drop.id)!.allocated_kg, 42);
   assert.equal(s.exceptions.length, 1);
   assert.equal(s.exceptions[0].production_run_id, x.run.id);
 });
@@ -545,4 +546,64 @@ test("database rejects invented consumption or a mass statement without reconcil
       [x.run.id],
     ),
   );
+});
+
+
+test("42 planned units unlock with exactly 42 kg; 68 remains only the maximum", async () => {
+ const f=await fixture(); await ready(f);
+ let d=(await snapshot(f.admin)).drops.find(d=>d.id===f.drop.id)!;
+ assert.equal(d.planned_units,42); assert.equal(d.requirements[0].required_kg,42);
+ assert.equal(d.maximum_capacity,68); assert.equal(d.capacity,42); assert.equal(d.eligible,true);
+ await call(f.admin,["drops",d.id,"unlock"]);
+ const s=await snapshot(f.admin); assert.equal(s.production[0].confirmed_units,42);
+ assert.equal(s.production[0].allocated_material_kg,42); assert.equal(s.production[0].gross_committed_sales,2058);
+ await call(f.admin,["production-runs",s.production[0].id,"approve"]);
+ await call(f.admin,["production-runs",s.production[0].id,"start"]);
+ await call(f.admin,["production-runs",s.production[0].id,"complete"]);
+ assert.equal((await snapshot(f.admin)).production[0].residual_kg,0);
+});
+
+test("larger demand raises every component target and cancellation recalculates an uncommitted plan", async () => {
+ const f=await fixture(); await ready(f);
+ const extra=await transaction(async c=>{
+  const users=(await c.query("SELECT id FROM users WHERE workspace_id=$1 AND role='consumer' AND id NOT IN (SELECT user_id FROM preorders WHERE drop_id=$2) LIMIT 8",[f.admin.workspace_id,f.drop.id])).rows;
+  return (await c.query("INSERT INTO preorders(drop_id,user_id,unit_price) SELECT $1,x,49 FROM unnest($2::uuid[]) x RETURNING id",[f.drop.id,users.map(u=>u.id)])).rows;
+ });
+ let d=(await snapshot(f.admin)).drops.find(d=>d.id===f.drop.id)!;
+ assert.equal(d.planned_units,50); assert.equal(d.requirements[0].required_kg,50);
+ assert.equal(d.material_ready,false); assert.equal(d.eligible,false);
+ assert.equal(d.auxiliary.find(r=>r.component==='lining')!.required_quantity,9);
+ await assert.rejects(call(f.admin,["drops",d.id,"unlock"]));
+ await call(f.admin,["preorders",extra[0].id,"cancel"],cmd());
+ d=(await snapshot(f.admin)).drops.find(d=>d.id===f.drop.id)!;
+ assert.equal(d.planned_units,49); assert.equal(d.requirements[0].required_kg,49);
+ await call(f.admin,["drops",d.id,"allocate-material"],{sourceId:f.batch.source_id,requirementId:d.requirements[0].id,kg:7,requestKey:crypto.randomUUID()});
+ const zipper=d.auxiliary.find(r=>r.component==='zipper')!;
+ await transaction(async c=>{
+  const key=cmd();await c.query("INSERT INTO accounting_commands(id,workspace_id,actor_id,reason) VALUES($1,$2,$3,$4)",[key.requestKey,f.admin.workspace_id,f.admin.id,key.reason]);
+  await c.query("INSERT INTO auxiliary_releases(allocation_id,quantity,command_id) SELECT id,26,$2 FROM auxiliary_allocations WHERE requirement_id=$1",[zipper.id,key.requestKey]);
+ });
+ d=(await snapshot(f.admin)).drops.find(d=>d.id===f.drop.id)!;
+ assert.equal(d.auxiliary.find(r=>r.component==='zipper')!.ready,false);
+ assert.equal(d.material_ready,false);
+ const view=(await pool.query("SELECT minimum_quantity FROM component_readiness WHERE id=$1",[zipper.id])).rows[0];assert.equal(view.minimum_quantity,49);
+ await assert.rejects(call(f.admin,["drops",d.id,"unlock"]));
+ await call(f.admin,["drops",d.id,"receive-auxiliary"],{...cmd(),requirementId:zipper.id,quantity:7});
+ // A smaller run must not hide the shortage of an all-confirmed-order plan.
+ await assert.rejects(transaction(async c=>{
+  await c.query("UPDATE drops SET phase='unlocked' WHERE id=$1",[d.id]);
+  await c.query("INSERT INTO production_runs(drop_id,confirmed_units,allocated_material_kg,estimated_unit_cost,selling_price) VALUES($1,42,49,18,49)",[d.id]);
+ }));
+ await call(f.admin,["drops",d.id,"unlock"]);
+ assert.equal((await snapshot(f.admin)).production[0].confirmed_units,49);
+});
+
+test("legacy 67.2 kg allocation is already material-ready for 42; no fabricated shortage", async()=>{
+ const f=await fixture();
+ await call(f.admin,["drops",f.drop.id,"allocate-material"],{sourceId:f.batch.source_id,requirementId:f.drop.requirements[0].id,kg:26,requestKey:crypto.randomUUID()});
+ let d=(await snapshot(f.admin)).drops.find(d=>d.id===f.drop.id)!;
+ assert.equal(d.allocated_kg,67.2);assert.equal(d.material_ready,true);assert.equal(d.demand_ready,false);
+ await call(f.admin,["drops",d.id,"preorder"]);
+ await call(f.admin,["drops",d.id,"unlock"]);
+ assert.equal((await snapshot(f.admin)).production[0].confirmed_units,42);
 });

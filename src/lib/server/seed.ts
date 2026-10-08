@@ -111,7 +111,7 @@ export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
       cost: 18,
       input: 1,
       threshold: 42,
-      min: 68,
+      min: 42,
       max: 68,
       blend: false,
     },
@@ -175,7 +175,7 @@ export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
       await allocate(c, admin, drop.id, {
         sourceId: sources.D102,
         requirementId: req.id,
-        kg: 60,
+        kg: 34,
         requestKey: crypto.randomUUID(),
       });
     if (recipe.code === "DROP017")

@@ -132,3 +132,7 @@ Immutable reversals, simulated reward redemption and bounded production cancella
 ## Accounting extension
 
 See [accounting specification](accounting.md) for all reversal APIs, order state transitions, quality enums, calibrated recipe BOM, auxiliary ledgers and the mass reconciliation equation. Migrations preserve legacy quantities and completed histories. Current balances are computed over original and reversal records, never from React state.
+
+### Planned production material gate
+
+Before commitment: planned units = max(maker minimum, confirmed orders). After commitment: use the active production run's immutable confirmed_units. Each recovered/auxiliary requirement is planned units × per-unit BOM allowance (kg rounded up to a gram). getDrop and PostgreSQL component_readiness derive these targets; they are not duplicated in stored ledger rows. The material maximum limits allocations and defines the batch ceiling, not unlock readiness. Current verified capacity remains the minimum component capacity. Migration 011 preserves all historic material movements.
