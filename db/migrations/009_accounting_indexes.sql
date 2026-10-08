@@ -1,0 +1,10 @@
+CREATE INDEX reward_owner_ledger ON reward_transactions(user_id);
+CREATE INDEX reward_original ON reward_transactions(original_transaction_id);
+CREATE INDEX source_workspace ON material_sources(workspace_id);
+CREATE INDEX effective_allocation_requirement ON drop_material_allocations(requirement_id);
+CREATE INDEX aux_allocation_source ON auxiliary_allocations(source_id);
+CREATE INDEX aux_allocation_requirement ON auxiliary_allocations(requirement_id);
+CREATE INDEX aux_releases_original ON auxiliary_releases(allocation_id);
+CREATE INDEX consumption_run ON production_consumptions(production_run_id);
+CREATE INDEX auxiliary_consumption_run ON auxiliary_consumptions(production_run_id);
+CREATE INDEX drop_workspace ON drops(workspace_id);

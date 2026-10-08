@@ -1,132 +1,119 @@
-# Remix Drop
+# terise
 
-**Turn surplus into products people have already chosen.**
+**Turn demand into recovery, and recovery into the next drop.**
 
-A Next.js hackathon MVP for demand-before-production circular retail. It compares keeping products in use, repairing them, remaking material and recycling. It then tests demand for one selected Remix concept before unlocking production.
+Demand tells us what materials are needed. Recovered materials determine what can be produced. The loop is **WEAR → RETURN → MATCH → UNLOCK → REMIX**, with keeping, repairing and reusing wearable clothing ahead of recovery.
 
-## Run
+Retail surplus can become another generation of unwanted products if it is remade without demand. terise compares circular routes, verifies supported recipes and material, and requires confirmed buyers before production. Consumers contribute useful material to drops with actual material needs. This is **Demand-Driven Material Recovery**: observe demand → identify required material → reward matching returns → recover material → produce confirmed demand. Conventional collection often decides the material destination later.
 
-Node.js 22+ and npm:
+## Why terise
 
-```sh
+terise is our own spelling of Teresa, inspired by the ideas of harvest and summer. We want brands and people to gain something from what already exists, and to do our part in giving the Earth its summers back.
+
+让企业和每个人都有所收获，也还给地球正常的夏天。🌞
+
+## Run locally
+
+Prerequisites: Node.js 22+, npm and PostgreSQL 17. This Windows workspace uses a dedicated project database on `127.0.0.1:55432`, separate from any existing PostgreSQL service.
+
+```powershell
 npm install
+npm run db:local
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
-Open the local URL printed by Next.js (normally http://localhost:3000).
+Open [terise locally](http://127.0.0.1:3000). The app runs locally; pushing the source to GitHub does not deploy it. `db:local` starts or initializes `.local-data/postgres`, generates a local password and writes the server-only `DATABASE_URL` and `LOCAL_DEMO=true` into ignored `.env.local`. It expects PostgreSQL at `C:\Program Files\PostgreSQL\17\bin`. For another PostgreSQL installation, set a suitable `DATABASE_URL` in `.env.local`, set `LOCAL_DEMO=true`, and run migration/seed directly. Back up `.local-data` and `.env.local` together using normal PostgreSQL backup procedures; do not delete the cluster to reset the demo.
+
+Migrations are versioned and seed is idempotent. **Reset demo creates a new persistent workspace**, preserving previous runs. Use the Demo run selector to revisit them. Restart the database with `npm run db:local` after a machine restart.
 
 ```sh
 npm run typecheck
-node --test tests/engines.test.cjs
+npm test                 # 23 existing unit tests + PostgreSQL integration tests
+npm run test:api         # independent HTTP sessions; requires local server on port 3000
 npm run build
+npm start                # stop dev first if using the same port
 ```
 
-The production build statically exports to `out/`. Host that directory on a static web server; `next start` is not the preview command for a static export.
-
-## Problem and solution
-
-Surplus inventory loses value. Remaking it without checking demand can produce another generation of unwanted products. Remix Drop first compares circular routes, then uses material-constrained concepts and simulated pre-orders to demonstrate how brands can avoid speculative remanufacturing.
-
-This iteration is a deterministic prototype, **not a scientifically validated decision system**, real demand prediction or production marketplace. No authentication, payments, Supabase or external API is required.
+Both web scripts bind to 127.0.0.1. Integration tests create isolated workspaces in the local database; tests never clear existing records. They require migrations and `DATABASE_URL`. API tests create an isolated saved demo run and use separate cookie sessions.
 
 ## Three-minute demo
 
-1. Start with 180 Denim Jeans, Cotton Denim, Unsold / Minor Defects, SGD 69 original price and 142 kg reusable material.
-2. Analyse routes. Remix wins the calculated comparison; expand **Why this route?** to inspect inputs and weighted score contributions.
-3. Inspect three alternative designs: Tote capacity 68, Sleeve 92, Jacket 31. Select Denim Tote and launch its consumer drop.
-4. Tote begins with 41 / 42 simulated confirmed pre-orders. Vote, reserve, or confirm a demo pre-order. The explicit 42nd-order demo button uses the same order action.
-5. The 42nd order goes directly to the impact view with an animated **PRODUCTION UNLOCKED** banner, 42 orders and SGD 2,058 committed gross sales.
-6. The same view shows 180 jeans **assessed**, 84% estimated design utilisation, 68 maximum units, SGD 3,332 maximum potential gross sales, and zero speculative units produced before validation.
+1. Remain **Demo Operator** and select **Scan an item**. Optional Demo AI identifies a damaged pair of Cotton Denim jeans; review type, condition and usage. Confirm the item. Good wearable clothing instead recommends Keep & Restyle, repair or reuse.
+2. Match the default 0.8 kg estimate to **Drop #024, Denim Utility Bag**. It has 41 confirmed simulated preorders and 67.2 kg allocated verified-in-demo material. Multiple active drops are evaluated with deterministic compatibility rules.
+3. Reserve a mock collection point. **Reservation adds no material or reward.** Simulate receipt, explicitly simulate inspection, then allocate accepted material to the drop. These are separate persisted operations. Accepted verification issues 100 base + 80 demand-bonus credits once; allocation raises material to 68 kg while demand remains 41/42.
+4. Confirm the 42nd simulated preorder. Both gates are ready. The Demo Operator requests the server unlock; **DROP UNLOCKED** and impact show 42 buyers, 68 kg allocated material, capacity 68 and **SGD 2,058 committed gross sales**.
+5. Optionally approve, start and complete the planned 42-unit production. The recipe consumes 42 kg; **26 kg enters the future material pool** as traceable residual sources. Use Brand Studio's material ledger to allocate them to a later compatible drop.
+6. Reload or change local identity. Wardrobe, returns, contributions, preorders, reward entries, production and inventory balances remain stored. A consumer can contribute and preorder; a brand user approves production. Only the combined Demo Operator role auto-requests unlock for the short presentation.
 
-Reset restores all defaults. Editing inventory resets demand so previous commitments cannot silently survive changes to material, cost or capacity. Switching the selected concept also starts its own seeded demand scenario; after the user places an order, reset or edit inventory before switching. Non-selected concepts remain interest tests with votes and reservations, not competing material commitments.
+Reverse steps 3 and 4 to show that demand alone cannot unlock production. All inspection, payment and manufacturing actions remain clearly simulated; no physical collection, voucher or payment service is contacted.
 
-## Calculation architecture
+## Preserved Brand Studio
+
+B017 is a **separate** 180-jean / 142 kg brand-demo batch, fully assigned to the existing Denim Tote drop. Select Analyse circular routes → Explore Remix concepts → Generate Remix Opportunities → Denim Tote → open its drop. The default recommendation is Remix; other conditions can recommend resale, repair or recycling. The existing Tote has 41 seeded orders, capacity 68 and price SGD 49. One preorder gives 42 orders and SGD 2,058; the maximum potential gross sales are SGD 3,332. Unselected concepts are alternative historical material uses, not extra available production capacity.
+
+Editing quantity, price, material, condition or weight updates deterministic estimates. Saving corrected inputs creates a **new batch**, preserving old orders and allocations. Generate proposals, confirm the separate inventory inspection and launch a supported concept. New drops start at **zero observed demand**, never fabricated 41-order history. The database refuses reuse of already allocated material. The interface separates estimated potential from available verified kilograms.
+
+The consumer-loop batch D102 contains 180 jeans and 142 kg verified-in-demo material: 60 kg allocated to #024, 82 kg remaining. Nine earlier consumer receipts contribute 7.2 kg. The default new receipt contributes another 0.8 kg. B017 does not reuse D102's material.
+
+## Architecture and data
 
 ```text
-lib/mock-data.ts       Typed inputs, material/condition assumptions,
-                      product recipes and simulated demand seeds
-        ↓
-lib/remix-engine.ts    Available material → capacities, design yields,
-                      suggested prices, unit costs and feasibility
-        ↓
-lib/circular-engine.ts Four routes → gross value estimates,
-                      factor contributions, explanations and recommendation
-
-lib/economics.ts       Selected concept + confirmed orders → gross sales,
-                      estimated production cost and unlock eligibility
-        ↓
-React workflow state → route-analysis / concepts-view / consumer-drop / impact-view
+Frontend → Server/API layer → Domain engines → Transaction/service layer → PostgreSQL
 ```
 
-The UI consumes engine results; it does not store fixed route scores, capacities or impact revenue. Product recipes and behavioural assumptions live outside the UI. React state is session-local and resets on reload.
+- `src/lib/ai/`: optional interpretation, extraction, styling and product ideation.
+- `circular-engine.ts`, `remix-engine.ts`, `economics.ts`: preserved deterministic route scoring, material capacities and financial arithmetic.
+- `material-match-engine.ts`, `rewards-engine.ts`, `return-engine.ts`, `unlock-engine.ts`: composition compatibility, recovery reward rules, circular hierarchy and pure gate logic.
+- `src/lib/server/validation.ts`: strict runtime schemas; no client-supplied verified values in extraction endpoints.
+- `src/lib/server/service.ts`: role/ownership checks, transactions, lifecycle transitions, allocation, order creation, inspections and production reconciliation.
+- `src/lib/server/snapshot.ts`: consistent reads, derived balances, histories and observed analytics.
+- `db/migrations/`: relational entities, foreign keys, uniqueness, immutable ledgers and allocation/production guards.
+- `src/lib/persistent-client.ts`: API-backed client snapshots. Local state contains editable drafts and navigation only.
 
-## Material and capacity assumptions
+**AI = interpretation. Domain engines = calculation. Database = authoritative state. Ledger = traceability. Consumers = demand validation.**
 
-- Estimated reference reusable weight per source item: `142 / 180` kg.
-- Entered reusable kg is optional. If blank, use quantity × estimated weight/item. Entering zero intentionally means no reusable material.
-- Quantity edits proportionally scale entered kg using the last kg/item ratio. The user can then override kg. The engine caps available kg at quantity × reference kg/item; this is an explicit conservative prototype rule, not a verified physical measurement.
-- Effective material = available kg × material yield × condition panel suitability.
-- Cotton Denim yield = 1; Cotton Blend Denim = 0.85.
-- Condition panel factors: minor defects 1; good condition 1; broken fastenings 0.95; damaged reusable panels 0.7; fibre-only 0.
-- Prototype input allowances per finished product: Tote `142 / 68` kg, Sleeve `142 / 92` kg, Jacket `142 / 31` kg. These are calibration assumptions covering grading, matching and panel constraints; they are not claims about finished product weight or validated cutting patterns.
-- Maximum capacity = floor(effective material / input allowance). A small numeric tolerance avoids floating-point rounding one exact whole unit down.
-- Design utilisation: base 84%, 77%, 90% respectively × material yield, rounded; zero if no effective material. This is a design estimate for material allocated to that concept, not the percentage of all assessed garments diverted.
-- Concepts are **alternative uses of the same material**. Their capacities cannot be added together. Only one selected concept accepts pre-orders.
+See [architecture, ERD, API and state transitions](docs/architecture.md) and [full calculation assumptions](docs/calculation-assumptions.md).
 
-## Prices, costs and production minimum
+The material ledger tracks brand inventory, accepted returns and production residuals separately. Transactions, row locks, workspace serialization and unique references prevent double allocation, receipt, reward and preorder. Production capacity is derived from verified component allocations. Explicit recipe BOMs distinguish recovered fabric from required auxiliary components. Capacity is limited by the scarcest component; the short demo keeps auxiliary details collapsed.
 
-Suggested selling price = round(base concept price × sqrt(original retail price / 69) × material price factor), minimum SGD 1. Base prices are SGD 49 / 35 / 95. Cotton factor is 1; blend factor is 0.95.
+Brand analytics count stored votes, reservations, preorders, returns, matches and chosen routes. They are labelled **Observed demo data**. Forecast ranges and scores are **Prototype predictions/estimates**. No fixed 68% preference is presented as observed evidence. Reward balance is the signed sum of earn/redeem/reverse/expire entries. Inventory remaining weight includes immutable releases and correction events.
 
-Estimated unit production cost = base cost (SGD 18 / 14 / 42) × material cost factor × condition cost factor × small-batch loading. Blend cost factor is 1.1; cotton is 1. Condition factors are 1 / 1 / 1.1 / 1.2 / 1.5 in the condition order above. Small-batch loading is 1.2 when capacity is below the maker minimum, otherwise 1.
+## Accounting and physical materials
 
-Maker minima are assumed constants: Tote 42, Sleeve 32, Jacket 20. **These are production minimums, not break-even calculations.** A concept below its minimum cannot launch or accept reservations/pre-orders and receives no seeded orders. A confirmed order cannot exceed capacity.
+The optional **Accounting controls** panel supports preorder cancellation/refund, 50-credit simulated redemption, reward reversal/expiry, unused allocation release, accepted-return correction and planned/approved production cancellation. Every action retains the original history, references the original transaction and has an idempotency key. Only confirmed preorders count toward readiness. Cancellation of an unsupported planned run revokes readiness; demand changes after approval become visible business exceptions.
 
-Gross sales = confirmed order count × suggested price. Maximum potential gross sales = material capacity × suggested price, conditional on selling all units. At the default unlock, `42 × 49 = SGD 2,058`; maximum `68 × 49 = SGD 3,332`.
+The Utility Bag BOM keeps its 1 kg recovered-denim allowance and adds separately tracked lining (0.18 kg), zipper (1 each) and hardware (2 each). Calibrated simulated supplier stock supports 68 units. Every required component must be ready. Inspections record controlled quality attributes; A/B fabric can match the Utility Bag, while the Pouch also accepts C. AI never sets verified quality.
 
-Production cost shown is only an estimate for the displayed number of units. Setup, logistics, platform fees, returns and other costs are excluded. **No profit is calculated or claimed.**
+Completion reconciles **allocated = consumed + recoverable residual + non-recoverable residual**, within 0.001 kg. Process scrap is included within residuals, never double-counted. Default recovered denim still gives 68 = 42 + 26 kg; including auxiliaries, total mass is 81.6 = 50.4 + 31.2 kg. No environmental benefit is inferred.
 
-## Explainable route scoring
+See [reversal accounting, lifecycle, BOM, quality, mass balance and invariants](docs/accounting.md). Original workflows and tests remain in place. The headline is unchanged: **67.2 + 0.8 kg, 41 + 1 orders, SGD 2,058**.
 
-Each route returns a `score`, `factors`, `explanation`, financial estimate and viability flag. Six ratings on a 0–100 scale are weighted, each contribution rounded to two decimals, summed and rounded to an integer:
+## AI and human review
 
-| Factor | Weight | Rating basis |
-|---|---:|---|
-| Expected value recovery | 30% | Route gross value / highest route gross value × 100 |
-| Estimated waste avoidance | 20% | Assumed sell-through × retained material fraction |
-| Material utilisation | 15% | Resale 100, repair 95, calculated Remix design yield, recycling 90 |
-| Processing ease | 10% | Resale 100, repair 65, Remix 45, recycling 85 |
-| Lower production / sales risk | 10% | Assumed route demand percentage; recycling 95 |
-| Estimated demand | 15% | Condition-specific assumed demand; recycling 95 |
+**AI proposes; deterministic engines verify; consumers validate demand.** AI handles ambiguity. Deterministic rules handle commitments.
 
-Gross value formulas:
+AI may suggest product type, material, condition, quantity, styling or concept names and qualitative reasons. Users can correct all extracted inputs. Confidence is indicative and uncalibrated; confirmation of a classification is not physical verification. Only explicit inspection records supply verified material. AI cannot set rewards, allocation, route-score arithmetic, final price, material capacity, thresholds or unlock eligibility.
 
-- Resale: quantity × original price × clearance price retention × resale demand.
-- Repair: quantity × original price × repaired price retention × repaired demand.
-- Remix: calculated Tote capacity × suggested Tote price × assumed Remix demand.
-- Recycling: available kg × material fibre value/kg (cotton SGD 1.4; blend SGD 0.7).
+**Demo AI** works without an external API. It uses curated suggestions and deterministic text/CSV-like extraction. Optional images are human review references, not analysed by this mode. Unsupported concepts, such as Denim Sneakers, fail the recipe check. The exact same review and feasibility workflow is used in connected mode.
 
-| Condition | Resale demand | Repair demand | Remix demand | Clearance price retention | Repair price retention |
-|---|---:|---:|---:|---:|---:|
-| Minor defects | 12% | 20% | 88% | 25% | 45% |
-| Good condition | 90% | 80% | 65% | 65% | 65% |
-| Broken fastenings | 8% | 88% | 65% | 15% | 70% |
-| Damaged panels | 2% | 4% | 82% | 10% | 30% |
-| Fibre only | 0% | 0% | 0% | 0% | 0% |
+**Connected AI** is optional: add `OPENAI_API_KEY` and `OPENAI_MODEL` to the existing `.env.local`, without overwriting its database settings, then restart Next.js. The server adapter uses structured JSON, validates outputs and exposes only allowed suggestions. Credentials never enter browser code. The configured model must support the adapter's structured output and optional image input. Provider errors do not silently change inventory or switch modes. Connected mode tests mock transport; a live paid model call is not part of local verification.
 
-Waste avoidance ratings: resale = demand × 100; repair = demand × 95; Remix = demand × calculated utilisation; recycle = 90. These illustrative ratings do not prove disposal avoidance, lifecycle benefit or mass balance. They intentionally favour preserving existing products where feasible. Demand and risk are correlated assumptions, not independent evidence.
+## Assumptions and current limits
 
-Viability gates: resale demand ≥10%; repair demand ≥15%; Remix positive assumed demand and capacity ≥42; recycling positive available kg. Resale and repair also require a positive item count. The highest-scoring viable resale/repair/Remix route wins. Recycling is only recommended when those routes fail; a high recycling score cannot override a viable higher-value pathway. Zero-stock input returns no recommendation.
-
-The default recommends Remix. Good condition recommends resale, broken fastenings recommends repair, and fibre-only stock recommends recycling. Route comparison is based on a Tote scenario before concept selection; that is identified in the explanation and is not recomputed as a different product's route value.
+- Material recovery estimates, circular scores, concept yields and maker minima are prototype assumptions, not validated commercial or environmental results. No CO2 savings or universal disposal-avoidance claim.
+- Verified-in-demo fields result from explicit simulated inspection. They do not prove laboratory composition or physical receipt. Conservative verified weight cannot exceed the rule-based estimate; correct source inputs before inspection if the estimate is wrong.
+- Prices/costs come from supported recipes. Gross sales mean quantity × price, not profit. Setup, logistics, refunds and other costs are not a complete profit model.
+- Waste-Defined Scarcity comes from allocated recovered material, not a marketing cap. Each source can be spent once. Production must satisfy **both demand and material**, with orders within deterministic capacity.
+- Local identity switching is a lightweight role simulation, **not production authentication**. APIs enforce local-origin access and server ownership, but the app is intentionally not ready for public deployment. No Supabase account or cloud service is needed.
+- No real payments, vouchers, collection logistics or manufacturing. Simulated redemption, immutable reversals, bounded material releases and planned/approved production cancellation are supported. Started production requires explicit reconciliation; completed runs cannot be cancelled.
+- Supported recipes and material classifications are limited. Images are not stored as authoritative inventory evidence. Database migrations support additional drop components without a complex multi-material UI.
 
 ## Verification
 
-The automated engine tests cover default capacities and recommendation, exact unlock arithmetic, half/double quantities, insufficient stock, changing condition/material/price, missing/zero/excessive material, score reconstruction and a single selected material allocation.
+Existing 23 engine/AI/loop unit tests remain intact. PostgreSQL integration tests exercise actual transactions, duplicate calls, cross-drop over-allocation, rejected and partial returns, reward integrity, each independent unlock gate, production bounds, residual reuse, ownership, unsafe AI fields and persistent fresh reads. HTTP tests use two independent cookie sessions and concurrent mutations against the running application.
 
-Manual browser checks cover the complete default workflow, expandable explanations, inventory edits and resulting figures, desktop/mobile layouts, checkout confirmation and reset.
+The local browser regression covers the brand route/concept/drop flow, consumer receipt/inspection/allocation/preorder flow, reload persistence, dynamic quantity and responsive desktop/mobile layouts. No authentication provider, payment provider or external publishing is used.
 
-## Stack and accessibility
-
-Next.js App Router, React, TypeScript, Tailwind CSS 4, custom shared design tokens and Lucide icons. Existing generated product concept photography and premium retail design are retained. Responsive layouts, semantic forms and native details controls, keyboard focus styling, dialog focus trapping, labelled progress bars, live status messages, reduced-motion support and reset remain available.
-
-An optional feature-detected WebMCP tool navigates the same workflow stages. It performs no payments or external writes. This MVP has no authentication, persistent multi-user state, payment collection or actual manufacturing.
+Next.js, React, TypeScript, Tailwind CSS, Zod and PostgreSQL (`pg`). Existing product imagery, editorial layout, accessible labels/progress, keyboard dialog focus, reduced motion, workflow navigation and reset are retained.

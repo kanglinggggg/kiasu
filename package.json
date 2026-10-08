@@ -1,1 +1,36 @@
-{"name":"remix-drop","version":"1.0.0","private":true,"scripts":{"dev":"next dev --hostname 0.0.0.0","build":"next build","start":"next start","typecheck":"tsc --noEmit"},"dependencies":{"next":"16.3.8","react":"^19.2.0","react-dom":"^19.2.0","lucide-react":"^0.468.0"},"devDependencies":{"@tailwindcss/postcss":"^4.1.0","tailwindcss":"^4.1.0","typescript":"^5.9.0","@types/node":"^22.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0"}}
+{
+  "name": "terise",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit && npm run test:integration",
+    "db:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-db.ps1",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "test:unit": "node --test tests/*.test.cjs",
+    "test:integration": "node --env-file=.env.local --import tsx --test tests/integration.test.ts tests/accounting.integration.test.ts",
+    "test:api": "node --test tests/api.test.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "next": "16.3.8",
+    "pg": "^8.23.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.1.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.0"
+  }
+}

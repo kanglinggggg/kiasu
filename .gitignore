@@ -5,3 +5,5 @@ out/
 .sites-runtime/
 *.log
 .env*
+!.env.example
+.local-data/
