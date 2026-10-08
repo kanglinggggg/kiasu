@@ -10,8 +10,6 @@ Retail surplus can become another generation of unwanted products if it is remad
 
 terise is our own spelling of Teresa, inspired by the ideas of harvest and summer. We want brands and people to gain something from what already exists, and to do our part in giving the Earth its summers back.
 
-让企业和每个人都有所收获，也还给地球正常的夏天。🌞
-
 ## Try the website
 
 [Open terise](https://kanglinggggg.github.io/terise/) — a public, static demo on GitHub Pages. It uses sample data and Demo AI in your browser. Try the brand analysis or scan a pair of jeans, confirm the simulated return, then place the 42nd preorder. Refreshing resets the demo. No real collections, payments or accounts are created.
