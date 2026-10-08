@@ -12,6 +12,14 @@ terise is our own spelling of Teresa, inspired by the ideas of harvest and summe
 
 让企业和每个人都有所收获，也还给地球正常的夏天。🌞
 
+## Try the website
+
+[Open terise](https://kanglinggggg.github.io/terise/) — a public, static demo on GitHub Pages. It uses sample data and Demo AI in your browser. Try the brand analysis or scan a pair of jeans, confirm the simulated return, then place the 42nd preorder. Refreshing resets the demo. No real collections, payments or accounts are created.
+
+The local app below is the full PostgreSQL version, including inspection, immutable ledgers, reversals and production accounting. The website does not connect to that database.
+
+`npm run build:pages` builds the public demo into `.pages-build/out` using a separate build directory. Only the generated static files are deployed. Pushes to `main` publish through `.github/workflows/pages.yml`.
+
 ## Run locally
 
 Prerequisites: Node.js 22+, npm and PostgreSQL 17. This Windows workspace uses a dedicated project database on `127.0.0.1:55432`, separate from any existing PostgreSQL service.

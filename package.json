@@ -13,7 +13,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "test:unit": "node --test tests/*.test.cjs",
     "test:integration": "node --env-file=.env.local --import tsx --test tests/integration.test.ts tests/accounting.integration.test.ts",
-    "test:api": "node --test tests/api.test.mjs"
+    "test:api": "node --test tests/api.test.mjs",
+    "build:pages": "node scripts/build-pages.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
