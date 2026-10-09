@@ -129,8 +129,8 @@ export function PersistentLoop({
     <>
       <SectionTitle
         eyebrow="REMIX LOOP / DEMAND-DRIVEN MATERIAL RECOVERY"
-        title="Your Wardrobe, Reimagined."
-        description="Still worth wearing, or ready for another life? Discover your item’s next chapter."
+        title="Clothes you no longer wear?"
+        description="Check whether to keep, repair, pass on or return your item."
       />
       <div className="loop-steps">
         {["Wear", "Return", "Match", "Unlock", "Remix"].map((s, i) => (
@@ -145,7 +145,7 @@ export function PersistentLoop({
         <section className="panel loop-panel">
           <span className="eyebrow">01 / YOUR WARDROBE</span>
           <h2>Scan an item</h2>
-          <p>Start with what you own. Keeping it in use comes first.</p>
+          <p>Check the condition before deciding what to do with it.</p>
           {!canConsume && (
             <p className="callout">
               Switch to Consumer Alex or Demo Operator to save personal wardrobe
@@ -284,7 +284,7 @@ export function PersistentLoop({
                   </ol>
                   <p>
                     <em>
-                      The most sustainable item may be the one you keep wearing.
+                      If it still works for you, keep wearing it.
                     </em>
                   </p>
                 </>
@@ -293,7 +293,7 @@ export function PersistentLoop({
                 <>
                   <h3>
                     {myMatch
-                      ? "High Material Match"
+                      ? "Strong material match"
                       : "No current match for this drop"}
                   </h3>
                   {myMatch && (
@@ -340,7 +340,7 @@ export function PersistentLoop({
                           <b>{myMatch.reward.base} credits</b>
                         </span>
                         <span>
-                          Active material demand bonus{" "}
+                          Current material bonus{" "}
                           <b>+{myMatch.reward.bonus} credits</b>
                         </span>
                         <strong>
@@ -528,7 +528,7 @@ export function PersistentLoop({
                   </strong>
                   {Number(ret.verified_material_kg) > 0 && (
                     <p>
-                      Contributor benefit: a one-use 10% return discount, subject to eligibility and expiry. Choose it at the shop checkout; view its status in your wallet.
+                      A verified eligible return earns a one-use 10% discount. Check your wallet for its status, expiry and eligible products.
                     </p>
                   )}
                 </>
@@ -556,8 +556,8 @@ export function PersistentLoop({
           <div className="loop-product">
             <div
               role="img"
-              aria-label="Illustrative recovered denim bag"
-              className="product-image"
+              aria-label={`${d.name} · illustrative product concept`}
+              className={`product-image ${["tote","utility"].includes(d.recipe_key)?"terise-tote-image":["sleeve","blend-sleeve"].includes(d.recipe_key)?"terise-sleeve-image":""}`}
               style={{ backgroundPosition: "0% center" }}
             />
             <span>Illustrative concept · registered prototype recipe</span>
@@ -675,11 +675,11 @@ export function PersistentLoop({
       <div className="manifesto">
         <span className="eyebrow">REMIX LOOP</span>
         <h2>
-          Turn demand into recovery,
+          Recover materials needed
           <br />
-          <span>and recovery into the next drop.</span>
+          <span>for confirmed orders.</span>
         </h2>
-        <p>AI interprets. Rules verify. Consumers validate.</p>
+        <p>AI suggests options. Human review and fixed rules determine what can proceed.</p>
       </div>
     </>
   );

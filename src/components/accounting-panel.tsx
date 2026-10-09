@@ -31,7 +31,7 @@ export function AccountingPanel({
         ...extra,
       });
       setNotice(
-        "Saved as an immutable accounting event. Balances recalculated.",
+        "Accounting entry saved. Balances updated; the original record is unchanged.",
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Operation failed");
@@ -64,7 +64,7 @@ export function AccountingPanel({
       )}
       {notice && <p role="status">{notice}</p>}
       <h3>My preorders</h3>
-      {data.preorders.length === 0 && <p>No personal preorders.</p>}
+      {data.preorders.length === 0 && <p>You have no preorders yet.</p>}
       {data.preorders.map((p) => (
         <div className="history-row" key={p.id}>
           <strong>

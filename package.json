@@ -12,7 +12,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "test:unit": "node --test tests/*.test.cjs",
-    "test:integration": "node --env-file=.env.local --import tsx --test tests/integration.test.ts tests/accounting.integration.test.ts tests/commerce.integration.test.ts tests/tenant.integration.test.ts",
+    "test:integration": "node --env-file=.env.local --import tsx --test tests/integration.test.ts tests/accounting.integration.test.ts tests/commerce.integration.test.ts tests/tenant.integration.test.ts tests/concept-regeneration.integration.test.ts",
     "test:api": "node --test tests/api.test.mjs",
     "build:pages": "node scripts/build-pages.mjs"
   },

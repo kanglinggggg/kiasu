@@ -26,8 +26,8 @@ export function DomainHistory({ data, onBatch, onDrop, onItem }: Props) {
   ];
   return (
     <section className="panel persisted-history">
-      <span className="eyebrow">PERSISTENT HISTORY / {data.actor.name}</span>
-      <h2>Your circular record.</h2>
+      <span className="eyebrow">ACCOUNT HISTORY / {data.actor.name}</span>
+      <h2>Your items and orders.</h2>
       <div
         className="history-tabs"
         role="tablist"
@@ -204,7 +204,7 @@ export function StoredAnalytics({ data }: { data: Snapshot }) {
   const a = data.analytics;
   return (
     <details className="architecture">
-      <summary>Brand demand intelligence · observed demo data</summary>
+      <summary>Brand demand summary · observed demo data</summary>
       <div className="architecture-flow">
         <div>
           <strong>{a.preorders} confirmed preorders</strong>

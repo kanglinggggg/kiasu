@@ -630,11 +630,13 @@ export async function execute(a: Actor, path: string[], raw: unknown) {
             checks[i] = existing;
           }
         }
+        // Regeneration checks current stock, but cannot rewrite an approved recipe.
+        // Existing approved concepts keep their identity and approval history.
         for (const result of checks) {
           if (!result.concept) continue;
           const x = result.concept;
           await c.query(
-            `INSERT INTO remix_concepts(workspace_id,brand_id,batch_id,recipe_key,name,selling_price,unit_cost,input_kg,preorder_threshold,utilisation,reasoning,approved,proposal_source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'ai_assisted') ON CONFLICT(batch_id,recipe_key) DO UPDATE SET reasoning=EXCLUDED.reasoning,approved=EXCLUDED.approved,recipe_registered=false,brand_approved_at=NULL,maker_approved_at=NULL,maker_name=NULL WHERE NOT EXISTS(SELECT 1 FROM drops WHERE concept_id=remix_concepts.id)`,
+            `INSERT INTO remix_concepts(workspace_id,brand_id,batch_id,recipe_key,name,selling_price,unit_cost,input_kg,preorder_threshold,utilisation,reasoning,approved,proposal_source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'ai_assisted') ON CONFLICT(batch_id,recipe_key) DO UPDATE SET reasoning=EXCLUDED.reasoning,approved=EXCLUDED.approved,recipe_registered=false,brand_approved_at=NULL,maker_approved_at=NULL,maker_name=NULL WHERE remix_concepts.brand_approved_at IS NULL AND remix_concepts.maker_approved_at IS NULL AND NOT EXISTS(SELECT 1 FROM drops WHERE concept_id=remix_concepts.id)`,
             [
               a.workspace_id,
               batch.brand_id,

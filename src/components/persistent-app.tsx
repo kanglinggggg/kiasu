@@ -334,9 +334,9 @@ export default function PersistentApp() {
       <main className="main">
         <div role={error ? "alert" : "status"} aria-live="polite">
           <SectionTitle
-            eyebrow="TERISE / PREPARING THE EDIT"
-            title="The next chapter is loading."
-            description={error || "Connecting to your local collection and circular wallet…"}
+            eyebrow="TERISE / LOCAL DEMO"
+            title="Loading terise…"
+            description={error || "Loading inventory, orders and rewards from the local database…"}
           />
         </div>
         {error && (
@@ -363,7 +363,7 @@ export default function PersistentApp() {
           onClick={() => go("home")}
           aria-label="terise home"
         >
-          <span className="logo-mark">t.</span>terise
+          <span className="terise-logo" aria-hidden="true"/>
         </button>
         <nav aria-label="Main navigation">
           <button
@@ -508,7 +508,7 @@ export default function PersistentApp() {
       )}
       <main className="main" ref={heading} tabIndex={-1}>
         {stage === "home" && <FashionHome drops={data.drops.map(shopDrop)} commerce={data.commerce} balance={data.balance} perform={perform} onWardrobe={()=>go("loop")}/>}
-        {stage === "inventory" && <BrandMarginComparison key={brandDrop?.id??"none"} drop={brandDrop??data.drops.find(d=>d.code==="DROP024")} commerce={data.commerce}/>}
+        {stage === "inventory" && <><label>Financial outlook Drop<select aria-label="Financial outlook Drop" value={(data.drops.find(d=>d.id===loopDropId)??brandDrop??data.drops.find(d=>d.code==="DROP024"))?.id??""} onChange={e=>setLoopDropId(e.target.value)}>{data.drops.map(d=><option key={d.id} value={d.id}>{d.code} · {d.name}</option>)}</select></label><BrandMarginComparison key={(data.drops.find(d=>d.id===loopDropId)??brandDrop)?.id??"none"} drop={data.drops.find(d=>d.id===loopDropId)??brandDrop??data.drops.find(d=>d.code==="DROP024")} commerce={data.commerce}/></>}
         {stage === "history" && <RewardWallet commerce={data.commerce} balance={data.balance} perform={perform}/>}
         {error && (
           <p className="ai-error" role="alert">
@@ -517,7 +517,7 @@ export default function PersistentApp() {
         )}
         {busy && (
           <p className="save-status" role="status">
-            Saving and validating against the material ledger…
+            Saving and checking material balances…
           </p>
         )}
         {stage === "inventory" && canBrand && (
@@ -525,18 +525,18 @@ export default function PersistentApp() {
             <div className="page-heading">
               <SectionTitle
                 eyebrow={`THE BRAND STUDIO / ${selectedBatch?.code ?? "NEW BATCH"}`}
-                title="Good materials. New possibilities."
-                description="Give surplus a considered second life. Start with what you already have."
+                title="Plan your surplus stock."
+                description="Compare resale, repair, remaking and recycling for your stock."
               />
               <span className="outline-tag">
-                <Layers3 size={15} /> Circular retail, reimagined
+                <Layers3 size={15} /> Surplus stock planning
               </span>
             </div>
             <div className="loop-entry">
               <div>
                 <span className="eyebrow">REMIX LOOP</span>
                 <h3>
-                  Turn demand into recovery, and recovery into the next drop.
+                  Match returned clothing to materials your drops need.
                 </h3>
                 <p>
                   Keep wearable items in use. Match useful returns to material
@@ -583,7 +583,7 @@ export default function PersistentApp() {
                     <Package size={21} />
                   </div>
                   <div>
-                    <h2>Your surplus, in focus</h2>
+                    <h2>Inventory details</h2>
                     <p>Source inputs · estimates before inspection</p>
                   </div>
                 </div>
@@ -714,18 +714,18 @@ export default function PersistentApp() {
               </section>
               <aside className="inventory-story">
                 <div className="story-top">
-                  <span className="eyebrow">THE NEXT CHAPTER</span>
+                  <span className="eyebrow">DESIGN PREVIEW</span>
                   <span>{selectedBatch?.code}</span>
                 </div>
                 <h2>
-                  A second life.
+                  Existing stock.
                   <br />
-                  <em>A first choice.</em>
+                  <em>New designs.</em>
                 </h2>
                 <div className="story-product">
                   <ProductImage concept={calculated[0]} />
                   <span className="floating-label">
-                    <Scissors size={14} /> Recovered denim. Reimagined.
+                    <Scissors size={14} /> Recovered denim concept
                   </span>
                 </div>
                 <div className="story-bottom">
@@ -738,7 +738,7 @@ export default function PersistentApp() {
                       {stock.availableKg.toFixed(1)}
                       <small> kg</small>
                     </strong>
-                    <span>estimated material potential</span>
+                    <span>estimated reusable material</span>
                   </div>
                 </div>
               </aside>
@@ -892,8 +892,8 @@ export default function PersistentApp() {
           (brandDrop ? (
             <>
               <SectionTitle
-                eyebrow="THE IMPACT OF A BETTER DECISION"
-                title="A new chapter. Already chosen."
+                eyebrow="BATCH SUMMARY"
+                title="Orders and materials confirmed."
                 description="All commitments and verified allocations are read from the database."
               />
               <div className="impact-grid">
@@ -943,7 +943,7 @@ export default function PersistentApp() {
           <>
             <SectionTitle
               eyebrow="YOUR CIRCULAR RECORD"
-              title="Every item. Every contribution."
+              title="Your items, returns and orders."
               description="Saved wardrobe items, returns, preorders and ledger-derived rewards."
             />
             <DomainHistory
@@ -985,7 +985,7 @@ export default function PersistentApp() {
       </main>
       <footer>
         <span className="footer-brand">terise</span>
-        <span>Made from what exists. Chosen for what’s next.</span>
+        <span>Recovered materials. Made to order.</span>
         <span>SDG 12 · RESPONSIBLE PRODUCTION</span>
       </footer>
       {notice && (
@@ -1001,7 +1001,7 @@ export default function PersistentApp() {
             if (!busy) setCheckout(null);
           }}
         >
-          <h2>Make the next chapter happen.</h2>
+          <h2>Confirm your preorder.</h2>
           <p>
             {concepts.find((c) => c.id === checkout)?.name} ·{" "}
             {money(concepts.find((c) => c.id === checkout)?.price ?? 0)}

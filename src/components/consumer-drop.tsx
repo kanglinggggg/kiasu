@@ -55,13 +55,13 @@ export function ConsumerDrop({
             <span className="live-dot" /> REMIX {dropCode} · SINGAPORE
           </div>
           <h1>
-            {batch.quantity} forgotten jeans.
+            {batch.quantity} surplus jeans.
             <br />
             <span>What should they become?</span>
           </h1>
           <p>
-            You choose the next chapter. We only make it when enough of you want
-            it.
+            Choose a design. Production needs enough confirmed orders and the
+            required materials.
           </p>
         </div>
         <div className="drop-stamp">
@@ -71,14 +71,14 @@ export function ConsumerDrop({
             <br />
             WHAT EXISTS.
           </strong>
-          <span>Recovered denim, reimagined</span>
+          <span>Recovered denim concept</span>
         </div>
       </div>
       <p className="fine-print">
         Material gate:{" "}
         {e.materialReady
-          ? "READY — existing assessed batch supports the maker minimum."
-          : "NOT READY — insufficient assessed material."}{" "}
+          ? "READY · existing assessed batch supports the maker minimum."
+          : "NOT READY · insufficient assessed material."}{" "}
         Demand gate: {e.demandReady ? "READY" : "awaiting confirmed orders"}.
         Both gates must pass.
       </p>
@@ -232,7 +232,7 @@ export function ConsumerDrop({
         <div>
           <span className="eyebrow">
             {e.unlocked
-              ? "THE NEXT CHAPTER STARTS NOW"
+              ? "BATCH CONFIRMED"
               : "DEMAND BEFORE PRODUCTION"}
           </span>
           <h2>

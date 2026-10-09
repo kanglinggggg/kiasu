@@ -17,9 +17,9 @@ export const conditionProfiles = {
  'Unusable / Fibre Recovery Only':{panels:0,resellDemand:0,repairDemand:0,remixDemand:0,clearancePrice:0,repairPrice:0,repairCost:20,remixCost:1.5}
 };
 export const conceptTemplates = [
- {id:'tote',name:'Denim Tote',subtitle:'Your everyday carry. Reimagined.',inputKg:142/68,baseCost:18,basePrice:49,baseUtilisation:84,difficulty:'Low',votes:382,reservations:71,seedOrders:41,threshold:42,position:'0%',reason:'Large reusable panels and a simple pattern suit an everyday carry.'},
- {id:'sleeve',name:'Laptop Sleeve',subtitle:'A softer landing for your essentials.',inputKg:142/92,baseCost:14,basePrice:35,baseUtilisation:77,difficulty:'Low',votes:290,reservations:43,seedOrders:25,threshold:32,position:'50%',reason:'Compact patterns accommodate smaller panels with relatively simple assembly.'},
- {id:'jacket',name:'Patchwork Jacket',subtitle:'Different pieces. One of a kind.',inputKg:142/31,baseCost:42,basePrice:95,baseUtilisation:90,difficulty:'High',votes:195,reservations:18,seedOrders:11,threshold:20,position:'100%',reason:'Patchwork accepts varied shades, but needs skilled sewing and quality checks.'}
+ {id:'tote',name:'Denim Tote',subtitle:'An everyday tote in recovered denim.',inputKg:142/68,baseCost:18,basePrice:49,baseUtilisation:84,difficulty:'Low',votes:382,reservations:71,seedOrders:41,threshold:42,position:'0%',reason:'Large reusable panels and a simple pattern suit an everyday carry.'},
+ {id:'sleeve',name:'Laptop Sleeve',subtitle:'A laptop sleeve in recovered denim.',inputKg:142/92,baseCost:14,basePrice:35,baseUtilisation:77,difficulty:'Low',votes:290,reservations:43,seedOrders:25,threshold:32,position:'50%',reason:'Compact patterns accommodate smaller panels with relatively simple assembly.'},
+ {id:'jacket',name:'Patchwork Jacket',subtitle:'A jacket with contrasting denim panels.',inputKg:142/31,baseCost:42,basePrice:95,baseUtilisation:90,difficulty:'High',votes:195,reservations:18,seedOrders:11,threshold:20,position:'100%',reason:'Patchwork accepts varied shades, but needs skilled sewing and quality checks.'}
 ] as const;
 export type ConceptId=typeof conceptTemplates[number]['id'];
 export type DemandEntry={votes:number;reservations:number;preorders:number;voted:boolean;reserved:boolean;ordered:boolean};

@@ -31,3 +31,13 @@ footer{color:#5d655c}
 .modal-close{right:10px;top:9px;min-width:44px;min-height:44px;padding:8px 10px;background:#f0f1e8;color:#29352d;border-radius:5px;z-index:2}
 .fashion-checkout{padding-top:44px}
 .scan-photo-grid{padding-block:18px;gap:14px}.scan-photo-card{min-height:180px;padding:20px;border:1px dashed #919b8d;border-radius:10px;background:linear-gradient(145deg,#f7f3e9,#edf1ea);justify-content:center!important;text-align:center}.scan-photo-card input[type=file]{height:auto;border:0;background:transparent;padding:8px;font-size:12px}.scan-photo-card input[type=file]::file-selector-button{min-height:40px;border:0;border-radius:5px;background:#465d4d;color:white;padding:9px 13px;margin-right:10px;cursor:pointer}.scan-photo-card .loop-item-image{margin:8px auto 0;width:120px;height:120px}.scan-photo-card .text-button{margin-inline:auto}
+
+/* User-supplied campaign and product concept imagery. */
+.terise-tote-image{background-image:url('/terise-tote.png');background-size:contain!important;background-position:center!important;background-repeat:no-repeat;background-color:#f1ede7}
+.terise-sleeve-image{background-image:url('/terise-sleeve.png');background-size:contain!important;background-position:center!important;background-repeat:no-repeat;background-color:#e9e5df}
+.fashion-hero>img{width:56%;right:0;object-fit:contain;object-position:right center}.fashion-hero{background:#f7f6f3}
+@media(max-width:700px){.fashion-hero>img{width:100%;object-fit:cover;object-position:center 30%}}
+
+/* Supplied terise wordmark; the home button retains its accessible name. */
+.terise-logo{display:block;width:132px;height:70px;background:url('/terise-logo.png') center/contain no-repeat}
+@media(max-width:700px){.terise-logo{width:110px;height:58px}}
