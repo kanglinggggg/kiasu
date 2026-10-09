@@ -157,12 +157,12 @@ test("earn, redeem, reverse, expire are immutable and never permit a negative ba
   const f = await fixture();
   await accept(f);
   let s = await snapshot(f.admin);
-  assert.equal(s.balance, 180);
+  assert.equal(s.balance, 100);
   const redemption = await call(f.admin, ["rewards", "redeem"], {
     ...cmd(),
     amount: 50,
   });
-  assert.equal((await snapshot(f.admin)).balance, 130);
+  assert.equal((await snapshot(f.admin)).balance, 50);
   await assert.rejects(
     call(f.admin, ["rewards", "redeem"], { ...cmd(), amount: 131 }),
   );
@@ -170,21 +170,21 @@ test("earn, redeem, reverse, expire are immutable and never permit a negative ba
   await assert.rejects(
     call(f.admin, ["rewards", redemption.id, "reverse"], cmd()),
   );
-  assert.equal((await snapshot(f.admin)).balance, 180);
+  assert.equal((await snapshot(f.admin)).balance, 100);
   const earn = s.rewards.find((x) => x.amount === 100)!;
   await call(f.admin, ["rewards", earn.id, "expire"], { ...cmd(), amount: 30 });
-  assert.equal((await snapshot(f.admin)).balance, 150);
+  assert.equal((await snapshot(f.admin)).balance, 70);
   await assert.rejects(
     call(f.admin, ["rewards", earn.id, "expire"], { ...cmd(), amount: 71 }),
   );
 });
-test("return correction voids verified source and reverses both earnings exactly once", async () => {
+test("return correction voids verified source and reverses eligible earnings exactly once", async () => {
   const f = await fixture(),
     r = await accept(f);
   await call(f.admin, ["returns", r.id, "correct"], cmd());
   const s = await snapshot(f.admin);
   assert.equal(s.balance, 0);
-  assert.equal(s.rewards.length, 4);
+  assert.equal(s.rewards.length, 2);
   assert.equal(s.sources.find((x) => x.id === r.source_id)!.remaining_kg, 0);
   assert.equal(s.returns.find((x) => x.id === r.id)!.status, "corrected");
   await assert.rejects(call(f.admin, ["returns", r.id, "correct"], cmd()));
@@ -206,7 +206,7 @@ test("correction with spent reward fails atomically; reversing redemption permit
     amount: 50,
   });
   await assert.rejects(call(f.admin, ["returns", r.id, "correct"], cmd()));
-  assert.equal((await snapshot(f.admin)).balance, 130);
+  assert.equal((await snapshot(f.admin)).balance, 50);
   assert.equal(
     (await snapshot(f.admin)).sources.find((x) => x.id === r.source_id)!
       .remaining_kg,
@@ -430,7 +430,7 @@ test("concurrent redemptions cannot make balance negative", async () => {
     call(f.admin, ["rewards", "redeem"], key),
   ]);
   assert.equal(outcomes.filter((x) => x.status === "fulfilled").length, 1);
-  assert.equal((await snapshot(f.admin)).balance, 80);
+  assert.equal((await snapshot(f.admin)).balance, 0);
 });
 
 test("quality-aware matching uses inspected grade rather than provisional AI assumption", async () => {
@@ -524,7 +524,7 @@ test("PostgreSQL directly protects concurrent reward debits without the service 
     ),
   );
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
-  assert.equal((await snapshot(f.admin)).balance, 80);
+  assert.equal((await snapshot(f.admin)).balance, 0);
 });
 test("database rejects invented consumption or a mass statement without reconciled component records", async () => {
   const f = await fixture(),

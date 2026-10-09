@@ -104,7 +104,8 @@ All mutations are POST with strict JSON schemas; GET `/api/snapshot` returns a c
 | `/api/inventory/:id/analyse` | Brand/admin: deterministic route analysis |
 | `/api/inventory/:id/select-route` | Brand/admin: viable route selection |
 | `/api/inventory/:id/verify` | Brand/admin: explicit simulated inspection |
-| `/api/inventory/:id/concepts` | Brand/admin: deterministic recipe validation |
+| `/api/inventory/:id/concepts` | Brand/admin: save AI proposals and deterministic feasibility |
+| `/api/concepts/:id/approve` | Owning brand/admin: register BOM and record explicit simulated brand/maker approval |
 | `/api/consumer-items`, `/api/matches` | Consumer/admin: reviewed estimates / matching |
 | `/api/returns` | Consumer/admin: reserve, zero credited material |
 | `/api/returns/:id/receive` | Owner/admin: simulated physical receipt |
@@ -122,7 +123,11 @@ The Demo Operator automatically requests unlock when both gates are ready to pre
 
 ## Trust boundary and limitations
 
-The localhost-only demo uses random HttpOnly session tokens and server-side role/ownership checks. Its identity selector intentionally permits local impersonation of three seeded roles. It is **not production authentication** and must not be exposed publicly. PostgreSQL access is through the server; no browser service key or anonymous database access is provided. Supabase RLS/auth and production deployment are outside this iteration.
+The localhost-only demo uses random HttpOnly session tokens and server-side role/ownership checks. Its identity selector intentionally permits local impersonation of three seeded roles. It is **not production authentication** and must not be exposed publicly. PostgreSQL access is through the server; no browser service key or anonymous database access is provided. Same-workspace brands receive isolated private snapshots and PostgreSQL blocks cross-brand recovered-material allocations. This is a tested single-brand pilot boundary, not a claim of full multi-tenant authentication, RLS or production readiness.
+
+Public marketplace data is projected separately from Brand Studio data. Consumers can read published Drop price, demand and material progress. They do not receive batch IDs, unit costs, concepts, source balances, allocations, production records or brand sales totals. Brand users read only rows owned by their `brand_id`; admin/demo retains local audit visibility.
+
+`source_brand_ownership` derives ownership from the immutable lineage: inventory batch, target Drop of an accepted return, or origin production run for a residual. Bounty calculations and matching subtract only stock authorized for the target Drop brand. Cross-brand material trading, shared loyalty settlement and designer marketplaces are roadmap concepts only.
 
 AI writes only suggestions. Strict domain payloads reject injected verified kilograms, prices, rewards, capacities or unlock flags. Human confirmation of extraction is still an estimate; an explicit inspection operation creates verified-in-demo material. Nothing here proves a real physical inspection or lifecycle benefit.
 

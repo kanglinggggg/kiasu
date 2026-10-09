@@ -62,7 +62,7 @@ test("real seed is consistent; reservation never adds material or rewards", asyn
   assert.equal(s.balance, 0);
   assert.equal(s.returns[0].status, "reserved");
 });
-test("duplicate receipt and inspection races produce one receipt and one pair of reward entries", async () => {
+test("duplicate receipt and inspection races produce one receipt and one base reward with no false shortage bonus", async () => {
   const f = await fixture(),
     r = await reserved(f.admin, f.drop.id);
   const receives = await Promise.allSettled([
@@ -76,8 +76,8 @@ test("duplicate receipt and inspection races produce one receipt and one pair of
   ]);
   assert.equal(inspections.filter((r) => r.status === "fulfilled").length, 1);
   const s = await snapshot(f.admin);
-  assert.equal(s.balance, 180);
-  assert.equal(s.rewards.length, 2);
+  assert.equal(s.balance, 100);
+  assert.equal(s.rewards.length, 1);
   assert.equal(
     s.sources
       .filter((x) => x.source_type === "consumer_return")
@@ -114,7 +114,7 @@ test("partial acceptance caps source and reward at inspected quantity", async ()
   });
   const s = await snapshot(f.admin);
   assert.equal(s.returns[0].verified_material_kg, 0.4);
-  assert.equal(s.balance, 90);
+  assert.equal(s.balance, 50);
   await assert.rejects(
     run(f.admin, ["drops", f.drop.id, "allocate-material"], {
       sourceId: s.returns[0].source_id,
@@ -365,6 +365,14 @@ test("new brand batch scales deterministic capacity, requires verification, and 
     kg: 284,
     material: "Cotton Denim",
     note: "Simulated inspection for integration test",
+  });
+  await assert.rejects(
+    run(f.admin, ["drops"], { conceptId: concept.id }),
+    /registered recipe plus explicit brand and maker approval/,
+  );
+  await run(f.admin, ["concepts", concept.id, "approve"], {
+    makerName: "Integration maker review",
+    note: "Explicit simulated recipe approval for the integration test",
   });
   const drop = await run(f.admin, ["drops"], { conceptId: concept.id });
   s = await snapshot(f.admin);

@@ -1,4 +1,5 @@
 "use client";
+import {ProductDetail,shopDrop,RewardWallet} from "./fashion-commerce";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CheckCircle2, Scissors } from "lucide-react";
 import { Snapshot, Match, StoredDrop } from "@/lib/server/types";
@@ -11,13 +12,12 @@ import {
   itemUsages,
   recommendAction,
 } from "@/lib/return-engine";
-import { AIMode, confidenceLabel } from "@/lib/ai/inventory-analysis";
-import { suggestWardrobe } from "@/lib/ai/wardrobe-analysis";
+import { AIMode } from "@/lib/ai/inventory-analysis";
 import { stylingSuggestions } from "@/lib/ai/styling-suggestions";
 import { api } from "@/lib/persistent-client";
 import { money } from "@/lib/mock-data";
 import { SectionTitle, Progress } from "./ui";
-import { AIModeSelect } from "./ai-mode";
+import { WardrobeScanner } from "./wardrobe-scanner";
 import { QualityFields } from "./quality-fields";
 import { defaultQuality } from "@/lib/material-quality";
 import { DomainHistory, StoredAnalytics } from "./domain-history";
@@ -60,21 +60,14 @@ export function PersistentLoop({
       : defaultItem,
   );
   const [itemId, setItemId] = useState(first?.id ?? ""),
-    [description, setDescription] = useState(
-      "One pair of cotton denim jeans, damaged with reusable panels. No longer wearable.",
-    ),
-    [image, setImage] = useState<string>(),
-    [suggestion, setSuggestion] = useState<Awaited<
-      ReturnType<typeof suggestWardrobe>
-    > | null>(null),
     [matches, setMatches] = useState<Match[]>([]),
     [point, setPoint] = useState(
       data.points.find((p) => p.name === "NUS UTown")?.id ??
         data.points[0]?.id ??
         "",
     ),
-    [localError, setLocalError] = useState(""),
-    [aiBusy, setAiBusy] = useState(false);
+    [localError, setLocalError] = useState("");
+  const [shopOpen,setShopOpen]=useState(false);
   const [quality, setQuality] = useState(defaultQuality);
   const [inspectionKg, setInspectionKg] = useState("0.8"),
     [inspectionResult, setInspectionResult] = useState<
@@ -114,7 +107,6 @@ export function PersistentLoop({
   const mutate = (patch: Partial<ConsumerItem>) => {
     setItem((i) => ({ ...i, ...patch }));
     setItemId("");
-    setSuggestion(null);
   };
   const run = async (path: string, body: unknown = {}) => {
     try {
@@ -137,8 +129,8 @@ export function PersistentLoop({
     <>
       <SectionTitle
         eyebrow="REMIX LOOP / DEMAND-DRIVEN MATERIAL RECOVERY"
-        title="Your next chapter starts here."
-        description="Demand tells us what materials are needed. Recovered materials determine what can be produced."
+        title="Your Wardrobe, Reimagined."
+        description="Still worth wearing, or ready for another life? Discover your item’s next chapter."
       />
       <div className="loop-steps">
         {["Wear", "Return", "Match", "Unlock", "Remix"].map((s, i) => (
@@ -160,108 +152,7 @@ export function PersistentLoop({
               items.
             </p>
           )}
-          <details className="loop-ai">
-            <summary>AI-assisted identification · optional</summary>
-            <label>
-              Describe your item
-              <textarea
-                value={description}
-                maxLength={6000}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </label>
-            <label>
-              Optional item image
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  setImage(undefined);
-                  if (!file) return;
-                  if (
-                    file.size > 2 * 1024 * 1024 ||
-                    !["image/png", "image/jpeg", "image/webp"].includes(
-                      file.type,
-                    )
-                  ) {
-                    setLocalError("Use a PNG, JPEG or WebP image up to 2 MB.");
-                    return;
-                  }
-                  const reader = new FileReader();
-                  reader.onload = () => setImage(String(reader.result));
-                  reader.readAsDataURL(file);
-                }}
-              />
-            </label>
-            {image && (
-              <img
-                className="loop-item-image"
-                src={image}
-                alt="Item reference"
-              />
-            )}
-            <AIModeSelect
-              mode={mode}
-              connected={connected}
-              onChange={onMode}
-              disabled={aiBusy}
-            />
-            <p className="fine-print">
-              {mode === "demo"
-                ? "Mock text extraction; image is a human reference only."
-                : "This description and image are sent to the configured AI on request."}{" "}
-              AI never supplies verified kg, rewards or allocation.
-            </p>
-            <button
-              className="secondary"
-              disabled={aiBusy || busy || !!ret}
-              onClick={async () => {
-                setAiBusy(true);
-                try {
-                  setSuggestion(
-                    await suggestWardrobe(mode, description, image),
-                  );
-                } catch (e) {
-                  setLocalError(String(e));
-                } finally {
-                  setAiBusy(false);
-                }
-              }}
-            >
-              {aiBusy ? "Analysing…" : "Identify item"}
-            </button>
-            {suggestion && (
-              <div className="callout">
-                <div>
-                  <strong>Suggestions, not verification</strong>
-                  <p>
-                    {suggestion.type ?? "Unknown type"} ·{" "}
-                    {suggestion.material ?? "Unknown material"} ·{" "}
-                    {suggestion.condition ?? "Unknown condition"}
-                  </p>
-                  <small>
-                    {confidenceLabel(suggestion.confidence.material)} ·
-                    uncalibrated
-                  </small>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      mutate({
-                        ...(suggestion.type ? { type: suggestion.type } : {}),
-                        material: suggestion.material ?? "Unknown",
-                        ...(suggestion.condition
-                          ? { condition: suggestion.condition }
-                          : {}),
-                      })
-                    }
-                  >
-                    Apply suggestions for review
-                  </button>
-                </div>
-              </div>
-            )}
-          </details>
+          <WardrobeScanner disabled={busy || !!ret || !canConsume} onApply={mutate} />
           {saved && (
             <button
               className="text-button"
@@ -269,8 +160,6 @@ export function PersistentLoop({
               onClick={() => {
                 setItem(defaultItem);
                 setItemId("");
-                setImage(undefined);
-                setSuggestion(null);
               }}
             >
               Scan another item
@@ -365,13 +254,13 @@ export function PersistentLoop({
                 </label>
               </div>
               <p className="fine-print">
-                Human review saves estimates. Only the separate inspection
+                Return eligible clothing and receive 10% off your next terise product after verified acceptance. Human review saves estimates. Only the separate inspection
                 workflow creates verified material.
               </p>
               <button className="primary" disabled={saved} type="submit">
                 {saved
                   ? "Item saved to wardrobe"
-                  : "Confirm item & find best action"}
+                  : "Confirm item"}
               </button>
             </fieldset>
           </form>
@@ -477,7 +366,8 @@ export function PersistentLoop({
                         </select>
                       </label>
                       <p>
-                        11:00–19:00 · mock local collection, within seven days
+                        11:00–19:00 · hypothetical prototype collection point,
+                        within seven days
                       </p>
                       <button
                         className="primary"
@@ -513,6 +403,10 @@ export function PersistentLoop({
                 {new Date(ret.return_by).toLocaleDateString("en-SG", {
                   timeZone: "Asia/Singapore",
                 })}
+              </p>
+              <p className="fine-print">
+                Hypothetical prototype location and simulated collection record;
+                no collection partnership is claimed.
               </p>
               <p>
                 Estimated: {ret.estimated_material_kg} kg · verified:{" "}
@@ -632,10 +526,9 @@ export function PersistentLoop({
                   <strong>
                     +{ret.reward} circular credits · balance {data.balance}
                   </strong>
-                  {ret.reward_bonus > 0 && (
+                  {Number(ret.verified_material_kg) > 0 && (
                     <p>
-                      Contributor benefits: 10% future preorder discount + early
-                      access (simulated; current order remains full-price).
+                      Contributor benefit: a one-use 10% return discount, subject to eligibility and expiry. Choose it at the shop checkout; view its status in your wallet.
                     </p>
                   )}
                 </>
@@ -708,7 +601,7 @@ export function PersistentLoop({
               d.phase !== "market_test" ||
               !canConsume
             }
-            onClick={() => void run(`drops/${d.id}/preorder`)}
+            onClick={() => setShopOpen(true)}
           >
             {d.my_preorder_status
               ? `Your pre-order: ${d.my_preorder_status}`
@@ -757,6 +650,8 @@ export function PersistentLoop({
           </details>
         </aside>
       </div>
+      <RewardWallet commerce={data.commerce} balance={data.balance} perform={perform}/>
+      {shopOpen&&<ProductDetail drop={shopDrop(d)} commerce={data.commerce} balance={data.balance} perform={perform} onClose={()=>setShopOpen(false)} onScan={()=>setShopOpen(false)}/>}
       <StoredImpact data={data} drop={d} perform={perform} busy={busy} />
       <DomainHistory
         data={data}
@@ -873,6 +768,7 @@ export function StoredImpact({
       (p) => p.drop_id === d.id && p.status !== "cancelled",
     ),
     unlocked = ["unlocked", "production", "completed"].includes(d.phase),
+    wasUnlocked = useRef(unlocked),
     [error, setError] = useState("");
   // Local demo operator convenience: request the same server-validated unlock API.
   // Consumers themselves cannot approve or start production.
@@ -888,7 +784,7 @@ export function StoredImpact({
     }
   }, [d.id, d.phase, d.eligible, data.actor.role, perform]);
   useEffect(() => {
-    if (unlocked) {
+    if (unlocked && !wasUnlocked.current) {
       ref.current?.scrollIntoView({
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
           ? "auto"
@@ -896,6 +792,7 @@ export function StoredImpact({
       });
       ref.current?.focus({ preventScroll: true });
     }
+    wasUnlocked.current = unlocked;
   }, [unlocked]);
   const [scrap, setScrap] = useState("0"),
     [loss, setLoss] = useState("0");

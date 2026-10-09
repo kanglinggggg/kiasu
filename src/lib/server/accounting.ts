@@ -1,3 +1,4 @@
+import { reconcileCheckout } from './commerce';
 import { z } from "zod";
 import { PoolClient } from "pg";
 import { Actor, assertDomain, brandOwns, owns, role, roundKg } from "./domain";
@@ -215,6 +216,7 @@ export async function executeAccounting(
       "INSERT INTO preorder_events(preorder_id,from_state,to_state,command_id) VALUES($1,$2,$3,$4) RETURNING id",
       [p.id, p.status, next, key],
     );
+    await reconcileCheckout(c,a,p.id,next,key);
     if (next === "cancelled" && p.status === "confirmed") {
       await invalidatePlanned(c, a, p.drop_id, key);
       const committed = (
@@ -297,7 +299,11 @@ export async function executeAccounting(
         .strict()
         .parse(raw),
       key = await command(c, a, input);
-    if (action === "reverse") return reverseReward(c, a, recordId, key);
+    if (action === "reverse") {
+      const checkout = await c.query('SELECT id FROM checkout_records WHERE credit_transaction_id=$1', [recordId]);
+      assertDomain(checkout.rowCount === 0, 'Checkout credits must be restored by cancelling or refunding the linked preorder.');
+      return reverseReward(c, a, recordId, key);
+    }
     assertDomain(input.amount, "Expiration requires an amount.");
     const original = await one(
       c,

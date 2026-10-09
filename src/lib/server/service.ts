@@ -1,3 +1,5 @@
+import { executeCommerce, compatibleStock } from './commerce';
+import { demandBonus } from '../commerce-engine';
 import { plannedQuantity, requiredMaterial } from "../unlock-engine";
 import { executeAccounting } from "./accounting";
 import { reconcileProduction } from "./production-accounting";
@@ -179,6 +181,10 @@ export async function findMatches(
               : " Provisional grade B assumption; inspected quality is checked again before allocation."),
         },
         needed = roundKg(Math.max(0, req.required_kg - req.allocated_kg));
+      const stock=await compatibleStock(c,{workspace_id:workspace},req,drop.brand_id);
+      const signals=await one(c,"SELECT (SELECT count(*) FROM waitlist_entries WHERE drop_id=$1 AND status='active') waitlist,(SELECT COALESCE(sum(balance),0) FROM material_bonus_balances WHERE workspace_id=$2) spent,(SELECT bonus_budget FROM commerce_policies WHERE workspace_id=$2) budget",[drop.id,workspace]);
+      const base=match.compatible?rewardQuote(kg,match.compatibilityScore,kg,0).base:0;
+      const bonus=demandBonus(base,Math.max(0,needed-stock),drop.orders,drop.reservations,signals.waitlist,(signals.budget??10000)-signals.spent);
       results.push({
         ...match,
         dropId: drop.id,
@@ -187,7 +193,7 @@ export async function findMatches(
         requirementId: req.id,
         recoverableKg: kg,
         neededKg: needed,
-        reward: rewardQuote(kg, match.compatibilityScore, needed, drop.orders),
+        reward: {base,bonus,total:base+bonus},
       });
     }
   }
@@ -387,14 +393,12 @@ async function inspect(
             req.accepted_grades,
           ),
       );
-    const reward = rewardQuote(
-      input.kg,
-      req ? compatibility(input.material, req).compatibilityScore : 0,
-      drop.phase === "market_test" && req
-        ? req.required_kg - req.allocated_kg
-        : 0,
-      drop.orders,
-    );
+    const stock = req ? await compatibleStock(c,a,req,drop.brand_id,receipt.id) : 0;
+    const needed = req && drop.phase==='market_test' ? Math.max(0,req.required_kg-req.allocated_kg-stock) : 0;
+    const base = req ? rewardQuote(input.kg,compatibility(input.material,req).compatibilityScore,input.kg,0).base : 0;
+    const signals = await one(c,"SELECT (SELECT count(*) FROM waitlist_entries WHERE drop_id=$1 AND status='active') waitlist,(SELECT COALESCE(sum(balance),0) FROM material_bonus_balances WHERE workspace_id=$2) spent,(SELECT bonus_budget FROM commerce_policies WHERE workspace_id=$2) budget",[drop.id,a.workspace_id]);
+    const bonus = demandBonus(base,needed,drop.orders,drop.reservations,signals.waitlist,(signals.budget??10000)-signals.spent);
+    const reward={base,bonus,total:base+bonus};
     for (const [type, amount, reason] of [
       [
         "return_base",
@@ -459,6 +463,8 @@ export async function execute(a: Actor, path: string[], raw: unknown) {
     ]);
     const [resource, id, action] = path;
     if (id && !(resource === "rewards" && id === "redeem")) v.id.parse(id);
+    const commerceResult = await executeCommerce(c, a, path, raw);
+    if (commerceResult !== undefined) return commerceResult;
     const accountingResult = await executeAccounting(c, a, path, raw);
     if (accountingResult !== undefined) return accountingResult;
     if (resource === "inventory" && !id) {
@@ -628,9 +634,10 @@ export async function execute(a: Actor, path: string[], raw: unknown) {
           if (!result.concept) continue;
           const x = result.concept;
           await c.query(
-            `INSERT INTO remix_concepts(workspace_id,batch_id,recipe_key,name,selling_price,unit_cost,input_kg,preorder_threshold,utilisation,reasoning,approved) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(batch_id,recipe_key) DO UPDATE SET reasoning=EXCLUDED.reasoning,approved=EXCLUDED.approved WHERE NOT EXISTS(SELECT 1 FROM drops WHERE concept_id=remix_concepts.id)`,
+            `INSERT INTO remix_concepts(workspace_id,brand_id,batch_id,recipe_key,name,selling_price,unit_cost,input_kg,preorder_threshold,utilisation,reasoning,approved,proposal_source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'ai_assisted') ON CONFLICT(batch_id,recipe_key) DO UPDATE SET reasoning=EXCLUDED.reasoning,approved=EXCLUDED.approved,recipe_registered=false,brand_approved_at=NULL,maker_approved_at=NULL,maker_name=NULL WHERE NOT EXISTS(SELECT 1 FROM drops WHERE concept_id=remix_concepts.id)`,
             [
               a.workspace_id,
+              batch.brand_id,
               id,
               x.id,
               x.name,
@@ -649,6 +656,40 @@ export async function execute(a: Actor, path: string[], raw: unknown) {
         });
         return { id, checks };
       }
+    }
+    if (resource === "concepts" && id && action === "approve") {
+      role(a, "brand_user");
+      const input = v.approveConceptInput.parse(raw);
+      const concept = await one(
+        c,
+        `SELECT c.*,b.verified_at,b.route FROM remix_concepts c
+         JOIN inventory_batches b ON b.id=c.batch_id
+         WHERE c.id=$1 AND c.workspace_id=$2`,
+        [id, a.workspace_id],
+      );
+      brandOwns(a, concept.brand_id);
+      assertDomain(
+        concept.approved && concept.route === "Remix" && concept.verified_at,
+        "Only a feasible concept backed by verified Remix inventory can be approved.",
+      );
+      const recipe = await one(
+        c,
+        "SELECT count(*)::int n FROM recipe_components WHERE concept_id=$1",
+        [id],
+      );
+      assertDomain(recipe.n > 0, "A registered recipe BOM is required.");
+      await one(c,
+        `UPDATE remix_concepts SET recipe_registered=true,brand_approved_at=now(),maker_approved_at=now(),maker_name=$2
+         WHERE id=$1 AND brand_approved_at IS NULL AND maker_approved_at IS NULL
+           AND NOT EXISTS(SELECT 1 FROM drops WHERE concept_id=$1) RETURNING id`,
+        [id, input.makerName],
+      );
+      await audit(c, a, "concept_recipe_approved", "remix_concept", id, {
+        makerName: input.makerName,
+        note: input.note,
+        simulated: true,
+      });
+      return { id };
     }
     if (resource === "consumer-items" && !id) {
       role(a, "consumer");
@@ -822,8 +863,12 @@ export async function execute(a: Actor, path: string[], raw: unknown) {
           [input.conceptId, a.workspace_id],
         );
       assertDomain(
-        concept.approved && concept.batch_id,
-        "Select a verified, feasible inventory concept.",
+        concept.approved &&
+          concept.recipe_registered &&
+          concept.brand_approved_at &&
+          concept.maker_approved_at &&
+          concept.batch_id,
+        "A feasible concept needs a registered recipe plus explicit brand and maker approval.",
       );
       const batch = await one(
         c,

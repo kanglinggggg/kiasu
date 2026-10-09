@@ -1,4 +1,5 @@
 "use client";
+import {FashionHome,shopDrop,BrandMarginComparison,RewardWallet} from "./fashion-commerce";
 import { useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -47,7 +48,7 @@ import { DomainHistory, StoredAnalytics } from "./domain-history";
 import { AccessibleModal } from "./accessible-modal";
 import { MaterialManager } from "./material-manager";
 type Stage =
-  "inventory" | "routes" | "concepts" | "drop" | "impact" | "loop" | "history";
+  "home" | "inventory" | "routes" | "concepts" | "drop" | "impact" | "loop" | "history";
 const steps: Stage[] = ["inventory", "routes", "concepts", "drop", "impact"],
   labels = [
     "Surplus inventory",
@@ -57,9 +58,9 @@ const steps: Stage[] = ["inventory", "routes", "concepts", "drop", "impact"],
     "Impact",
   ];
 export default function PersistentApp() {
-  const { data, error, busy, perform, setError } = usePersistentData();
+  const { data, error, busy, refresh, perform, setError } = usePersistentData();
   const [inventoryQuality, setInventoryQuality] = useState(defaultQuality);
-  const [stage, setStage] = useState<Stage>("inventory"),
+  const [stage, setStage] = useState<Stage>("home"),
     [batch, setBatch] = useState<Batch>(defaultBatch),
     [batchId, setBatchId] = useState(""),
     [selectedConcept, setSelectedConcept] = useState<ConceptId>("tote"),
@@ -102,7 +103,13 @@ export default function PersistentApp() {
       setStage("loop");
   }, [data?.actor.id]);
   useEffect(() => {
-    heading.current?.focus();
+    heading.current?.focus({ preventScroll: true });
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
   }, [stage]);
   useEffect(() => {
     if (!notice) return;
@@ -111,12 +118,6 @@ export default function PersistentApp() {
   }, [notice]);
   const go = (s: Stage) => {
     setStage(s);
-    window.scrollTo({
-      top: 0,
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-    });
   };
   const notifyError = (e: unknown) =>
     setNotice(e instanceof Error ? e.message : "The operation failed.");
@@ -241,6 +242,14 @@ export default function PersistentApp() {
       );
       if (!concept?.approved)
         throw new Error("Generate and verify a feasible concept first.");
+      if (
+        !concept.recipe_registered ||
+        !concept.brand_approved_at ||
+        !concept.maker_approved_at
+      )
+        throw new Error(
+          "Register the recipe and record brand / maker approval before launch.",
+        );
       if (selectedBatch.verified_kg === null)
         throw new Error(
           "Confirm the inventory material inspection below before launch.",
@@ -250,6 +259,26 @@ export default function PersistentApp() {
       });
       setDropId(d.id);
       go("drop");
+    } catch (e) {
+      notifyError(e);
+    }
+  }
+  async function approveConcept() {
+    try {
+      if (!data || !selectedBatch) return;
+      const concept = data.concepts.find(
+        (c) =>
+          c.batch_id === selectedBatch.id && c.recipe_key === selectedConcept,
+      );
+      if (!concept?.approved)
+        throw new Error("Only a feasible proposal can enter recipe review.");
+      if (selectedBatch.verified_kg === null)
+        throw new Error("Confirm the inventory inspection before approval.");
+      await perform(`concepts/${concept.id}/approve`, {
+        makerName: "Prototype maker review",
+        note: "Brand and maker feasibility review recorded for the simulated pilot.",
+      });
+      setNotice("Recipe registered. Brand and simulated maker approval recorded.");
     } catch (e) {
       notifyError(e);
     }
@@ -279,18 +308,22 @@ export default function PersistentApp() {
       notifyError(e);
     }
   }
-  async function reset() {
+  async function reset(
+    scenario: "standard" | "genuine_shortage" = "standard",
+  ) {
     try {
-      await perform("demo-reset");
+      await perform("demo-reset", { scenario });
       setBatchId("");
       setDropId("");
       setLoopDropId("");
       setOpportunities(null);
       setCheckout(null);
       setAIMode("demo");
-      go("inventory");
+      go(scenario === "genuine_shortage" ? "home" : "inventory");
       setNotice(
-        "New persisted demo run created. Previous runs remain in the database.",
+        scenario === "genuine_shortage"
+          ? "Genuine-shortage audit scenario created: 41 buyers, 41.2 kg allocated, 0.8 kg verified material still needed."
+          : "New persisted demo run created. Previous runs remain in the database.",
       );
     } catch (e) {
       notifyError(e);
@@ -299,13 +332,23 @@ export default function PersistentApp() {
   if (!data)
     return (
       <main className="main">
-        <SectionTitle
-          eyebrow="REMIX DROP"
-          title="Your circular workspace."
-          description={error || "Connecting to the local PostgreSQL workspace…"}
-        />
+        <div role={error ? "alert" : "status"} aria-live="polite">
+          <SectionTitle
+            eyebrow="TERISE / PREPARING THE EDIT"
+            title="The next chapter is loading."
+            description={error || "Connecting to your local collection and circular wallet…"}
+          />
+        </div>
         {error && (
-          <button className="primary" onClick={() => window.location.reload()}>
+          <button
+            className="primary"
+            onClick={() => {
+              setError("");
+              void refresh().catch((e) =>
+                setError(e instanceof Error ? e.message : "Database unavailable"),
+              );
+            }}
+          >
             Retry connection
           </button>
         )}
@@ -317,33 +360,37 @@ export default function PersistentApp() {
       <header className="header">
         <button
           className="logo"
-          onClick={() => go(canBrand ? "inventory" : "loop")}
+          onClick={() => go("home")}
           aria-label="terise home"
         >
           <span className="logo-mark">t.</span>terise
         </button>
         <nav aria-label="Main navigation">
           <button
-            className={stage === "inventory" ? "active" : ""}
+            className={["inventory", "routes", "concepts"].includes(stage) ? "active" : ""}
+            aria-current={["inventory", "routes", "concepts"].includes(stage) ? "page" : undefined}
             onClick={() => go("inventory")}
             disabled={!canBrand}
           >
             Brand studio
           </button>
           <button
-            className={stage === "drop" ? "active" : ""}
-            onClick={() => (brandDrop ? go("drop") : go("loop"))}
+            className={["home", "drop", "impact"].includes(stage) ? "active" : ""}
+            aria-current={["home", "drop", "impact"].includes(stage) ? "page" : undefined}
+            onClick={() => go("home")}
           >
-            Explore the drop
+            Explore drops
           </button>
           <button
             className={stage === "loop" ? "active" : ""}
+            aria-current={stage === "loop" ? "page" : undefined}
             onClick={() => go("loop")}
           >
             Scan an item
           </button>
           <button
             className={stage === "history" ? "active" : ""}
+            aria-current={stage === "history" ? "page" : undefined}
             onClick={() => go("history")}
           >
             My history
@@ -408,22 +455,35 @@ export default function PersistentApp() {
                 {w.name === "Remix Demo"
                   ? w.name
                   : "Demo run " +
-                    new Date(w.name.slice(9)).toLocaleString("en-SG", {
+                    new Date(
+                      w.name.slice(9).split(" · ")[0],
+                    ).toLocaleString("en-SG", {
                       timeZone: "Asia/Singapore",
-                    })}
+                    }) +
+                    (w.name.includes("GENUINE SHORTAGE")
+                      ? " · Genuine shortage"
+                      : "")}
               </option>
             ))}
           </select>
         </label>
         <small>Local role simulation</small>
+        <button
+          className="scenario-button"
+          disabled={busy || data.actor.role !== "admin/demo"}
+          onClick={() => void reset("genuine_shortage")}
+        >
+          New genuine-shortage scenario
+        </button>
       </div>
-      {!["loop", "history"].includes(stage) && (
+      {!["home", "loop", "history"].includes(stage) && (
         <div className="workflow">
           <div className="workflow-inner">
             {steps.map((s, i) => (
               <button
                 key={s}
                 onClick={() => go(s)}
+                aria-current={stage === s ? "step" : undefined}
                 className={
                   stage === s
                     ? "current"
@@ -447,6 +507,9 @@ export default function PersistentApp() {
         </div>
       )}
       <main className="main" ref={heading} tabIndex={-1}>
+        {stage === "home" && <FashionHome drops={data.drops.map(shopDrop)} commerce={data.commerce} balance={data.balance} perform={perform} onWardrobe={()=>go("loop")}/>}
+        {stage === "inventory" && <BrandMarginComparison key={brandDrop?.id??"none"} drop={brandDrop??data.drops.find(d=>d.code==="DROP024")} commerce={data.commerce}/>}
+        {stage === "history" && <RewardWallet commerce={data.commerce} balance={data.balance} perform={perform}/>}
         {error && (
           <p className="ai-error" role="alert">
             {error}
@@ -726,6 +789,24 @@ export default function PersistentApp() {
                   setSelectedConcept(id);
                   setDropId("");
                 }}
+                approvalReady={Boolean(
+                  data.concepts.find(
+                    (c) =>
+                      c.batch_id === selectedBatch?.id &&
+                      c.recipe_key === selectedConcept,
+                  )?.recipe_registered &&
+                    data.concepts.find(
+                      (c) =>
+                        c.batch_id === selectedBatch?.id &&
+                        c.recipe_key === selectedConcept,
+                    )?.brand_approved_at &&
+                    data.concepts.find(
+                      (c) =>
+                        c.batch_id === selectedBatch?.id &&
+                        c.recipe_key === selectedConcept,
+                    )?.maker_approved_at,
+                )}
+                onApprove={() => void approveConcept()}
                 onLaunch={() => void launch()}
                 locked={busy || !canBrand}
               />
@@ -915,6 +996,7 @@ export default function PersistentApp() {
       )}
       {checkout && (
         <AccessibleModal
+          label="Demo preorder"
           onClose={() => {
             if (!busy) setCheckout(null);
           }}

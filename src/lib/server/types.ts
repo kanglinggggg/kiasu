@@ -1,3 +1,4 @@
+import type { CommerceSnapshot } from './commerce';
 import { Batch, ConceptId } from "../mock-data";
 import { ConsumerItem } from "../return-engine";
 import { Actor } from "./domain";
@@ -73,10 +74,17 @@ export type StoredBatch = {
 };
 export type StoredConcept = {
   id: string;
+  brand_id: string;
   batch_id: string | null;
   recipe_key: ConceptId | string;
   name: string;
   approved: boolean;
+  recipe_registered: boolean;
+  brand_approved_at: string | null;
+  maker_approved_at: string | null;
+  maker_name: string | null;
+  proposal_source: "ai_assisted" | "seeded_demo" | "human";
+  image_role: "illustrative";
   reasoning: string;
   selling_price: number;
   unit_cost: number;
@@ -160,6 +168,7 @@ export type Match = {
   reward: { base: number; bonus: number; total: number };
 };
 export type Snapshot = {
+  commerce: CommerceSnapshot;
   actor: Actor;
   workspaceName: string;
   workspaces: { id: string; name: string }[];

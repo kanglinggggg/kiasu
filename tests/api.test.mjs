@@ -65,7 +65,7 @@ test("independent cookie sessions share committed state and reject duplicate HTT
   ]);
   assert.deepEqual(inspected.map((x) => x.status).sort(), [200, 409]);
   const verified = (await b("snapshot")).body;
-  assert.equal(verified.balance, 180);
+  assert.equal(verified.balance, 100);
   const source = verified.returns.find((x) => x.id === ret.body.id).source_id;
   assert.equal(
     (
@@ -100,4 +100,17 @@ test("independent cookie sessions share committed state and reject duplicate HTT
     headers: { Origin: "https://example.com" },
   });
   assert.equal(foreign.status, 403);
+});
+
+
+test("failed wardrobe analysis leaves persisted records unchanged", async () => {
+  const a = await client();
+  const before = (await a("snapshot")).body;
+  const failed = await a("wardrobe", { description: "", verified_kg: 999 });
+  assert.equal(failed.status, 400);
+  const after = (await a("snapshot")).body;
+  for (const key of ["items", "returns", "drops", "rewards", "production", "allocations", "preorders", "contributions", "audit"]) {
+    assert.ok(Array.isArray(before[key]), key);
+    assert.deepEqual(after[key], before[key], key);
+  }
 });

@@ -1,48 +1,55 @@
-# Planned-quantity readiness verification — 8 October 2026
+# V7 pre-release acceptance audit — 9 October 2026
 
-Migration 011 applied without rewriting any ledger history. Typecheck, 24 unit tests, 42 PostgreSQL integration tests (including concurrency), and the independent HTTP session test passed: **67 tests** total. Production build and GitHub Pages export passed.
+The V7 release candidate was audited locally without committing, pushing or deploying it. The fresh public export was served from its `/terise/` base path; the deployed GitHub Pages site was left unchanged.
 
-New regression coverage checks exact 42 kg unlock, 67.2 kg already being ready for 42 units, larger demand raising every BOM target, cancellation recalculating an uncommitted target, insufficient zippers blocking a larger batch, direct PostgreSQL rejection of undersized plans, and gram rounding. Existing reversal, residual, quality and concurrency coverage is retained. Residual tests explicitly over-allocate 26 kg rather than treating it as an unlock requirement.
+## Automated release gates
 
-The revised fresh demo uses 34 kg brand material + 7.2 kg earlier returns + 0.8 kg new verified return = 42 kg, with 42 confirmed orders and SGD 2,058 committed gross sales. The waste-defined maximum remains 68 units. Old 67.2 kg workspaces remain intact and already meet the initial material requirement.
+- Migrations 012, 013 and 014 are applied. All ten commerce triggers, the recursive material-bonus view and the five query indexes are present.
+- Pure engine, AI and provider tests: **55 / 55 passed**.
+- PostgreSQL transaction, accounting and concurrency tests: **54 / 54 passed**.
+- Independent HTTP persistence tests: **2 / 2 passed**.
+- Total: **111 / 111 passed**.
+- TypeScript typecheck, Next.js production build and GitHub Pages static export passed.
+- `npm audit --omit=dev` reported no vulnerabilities.
+- The rebuilt static output contains the optimized WebP campaign and product assets, no stale PNG references and no server-secret patterns.
 
-Browser verification: the fresh local demo displayed 41.2 / 42 kg and maximum 68 units. A separately received, inspected and allocated 0.8 kg return made material ready while demand remained 41. The 42nd preorder created a planned 42-unit run, showing 42 kg, SGD 2,058 committed sales and SGD 3,332 maximum potential sales.
+The database tests include duplicate and competing allocations, duplicate receipt and inspection calls, confirmed-only demand, cancellation and refund reconciliation, double-spend prevention, entitlement uniqueness, exact checkout arithmetic, genuine shortage rewards, BOM component gates, residual material, mass balance, ownership and direct PostgreSQL forgery attempts.
 
-## Historical verification below (before migration 011)
+## Browser verification
 
-The following records describe the earlier 68 kg gate; they are retained as historical test evidence, not the current readiness specification.
+The persistent local application was exercised through the consumer shop: homepage, product details, benefit reservation, 10% return entitlement, 100-credit redemption, confirmation and order history. The displayed checkout reconciled `SGD 49.00 - SGD 4.90 - SGD 1.00 = SGD 43.10`. Cancellation restored the credit balance and eligible entitlement once. The cancelled-to-refunded transition advances the preorder and checkout records without issuing a second reversal.
 
-# Local verification — 8 October 2026
+The wardrobe flow was exercised through human review, return reservation, collection receipt, accepted inspection, entitlement issuance, material allocation and dual unlock. Reservation and receipt added no verified material, credits or usable discount. Accepted inspection issued one entitlement and reward. Allocation then changed production readiness.
 
-- PostgreSQL migrations 001–010 applied; rerun completed safely.
-- Seed rerun preserved existing records.
-- TypeScript typecheck passed.
-- 23 existing unit tests passed, unchanged.
-- 39 PostgreSQL integration tests passed (16 existing and 23 accounting tests), including concurrency and direct database invariant checks.
-- 1 HTTP integration test passed using two independent cookie sessions against the local server.
-- Next.js production build passed.
-- Total: 63 tests passed. Commands: `npm run db:migrate`, `npm run db:seed`, `npm run typecheck`, `npm run test:unit`, `npm run test:integration`, `npm run test:api`, `npm run build`.
+A separate genuine-shortage workspace starts with 41 confirmed buyers, 41.2 kg of verified allocated denim, no compatible authorized free stock and a 0.8 kg shortage. It advertises a deterministic bonus, issues it only after accepted inspection and removes the campaign when the accepted source covers the shortage. Allocation satisfies the BOM material gate; the 42nd simulated checkout satisfies demand and unlocks a 42-unit plan at SGD 2,058 gross merchandise value. The waste-defined maximum remains 68 units.
 
-## Observed browser workflows
+Brand Studio was checked with full-price orders, return discounts, redeemed credits, inspection, collection, manufacturing, auxiliaries, fixed setup and baseline costs. It keeps gross merchandise value, net simulated commitments, payable amount, relevant costs, contribution profit and forecast margin distinct. A deliberately unprofitable scenario showed negative contribution, negative uplift and a break-even above verified capacity.
 
-Desktop: preserved brand route analysis, AI proposal generation, server feasibility checks, existing Tote drop 41 → 42 and SGD 2,058. Changed inventory to 360 jeans / 284 kg, observed doubled route values and Tote/Sleeve/Jacket capacities 136/184/62. Confirmed separate inspection, launched a new 136-capacity drop with zero seeded orders. Existing source allocations were preserved.
+Desktop and 390 × 844 browser-emulated mobile layouts were inspected. The final mobile product-details and checkout dialogs have visible 44 px close controls without overlapping headings. No horizontal overflow was observed. This was viewport emulation, not a physical-device test.
 
-Consumer loop: reserved return added no material; receipt added no material; explicit simulated inspection accepted 0.8 kg and awarded 180 credits once; allocation changed 67.2 → 68 kg. Demand stayed locked at 41. The 42nd preorder unlocked a planned 42-unit run. Approval/start/completion consumed 42 kg and returned 26 kg to the future pool. Reload retained return, rewards, orders and completed production.
+## Local CLIP observations
 
-Mobile (390 × 844): scan form, wearable-item Keep & Restyle with three suggestions, consumer history/rewards, identity role restrictions and the existing consumer drop. Document width did not exceed viewport. Preorder dialog wrapped Shift+Tab to Cancel; Escape closed it without ordering. Fresh console inspection showed no warnings/errors. Viewport override restored afterward.
+Image-only Local CLIP scans were run for denim jeans, a denim jacket, a T-shirt and unsupported footwear. Unsupported or weak clothing results remained unconfirmed, and material composition stayed Unknown without label evidence. Cancellation returned the scanner to an editable state and retry completed.
 
-Independent HTTP sessions observed the same committed material and demand. Simultaneous duplicate receipt, inspection and preorder calls returned one success and one conflict. Cross-origin access, consumer production unlock and injected authoritative AI fields were rejected.
+The rebuilt static export loaded `Xenova/clip-vit-base-patch32` without an application API key. A first model-loading scan in the final local Pages build reported **34.9 seconds**; browser-observed end-to-end time, including image preparation and audit polling, was about **54.2 seconds**. A separate fully cold audit run took about **103 seconds**. Repeated warm inference reported **1.1 seconds** in the UI (about **3.2 seconds** including the fixed audit wait). Timing depends on network, browser cache and hardware and is not a performance guarantee.
 
-Integration coverage also includes competing allocations, rejected/partial inspection, residual reuse, multi-component material readiness, overcapacity lock, new brand batch lifecycle, and no second drop funded from spent material.
+## Fixes made during acceptance
 
-## Accounting and physical modelling iteration
+- Added migration 014 guards for checkout transitions, entitlement linkage, exact credit/discount arithmetic and deferred ledger consistency.
+- Corrected recursive material-bonus accounting.
+- Added a genuine-shortage seed that does not ignore compatible stock and stopped zero-demand drops from advertising bounties.
+- Corrected baseline capacity, undefined zero-sales margin, unreachable break-even messaging and workspace-total labels.
+- Reconciled checkout refund state, separated discount and credits in order history and prevented an invalid second preorder after cancellation.
+- Fixed stage focus, unlocked-page auto-scroll, modal labels and close targets, image mapping, text contrast, loading/error recovery and responsive scan presentation.
+- Replaced large public PNG delivery assets with documented WebP variants.
 
-Repeated the default consumer flow with the new BOM and quality inspection fields: 67.2 + 0.8 kg, then 41 → 42 confirmed orders, unlocked at SGD 2,058. Approved, started and completed the run through the browser. The physical statement displayed 81.6 kg allocated = 50.4 kg consumed + 31.2 kg recoverable residual + 0 kg non-recoverable residual, including auxiliaries. The recovered denim portion remains 68 = 42 + 26 kg. These are calibrated prototype recipe quantities, not measured manufacturing results.
+## Remaining limitations and release hold
 
-Simulated reward redemption changed the balance from 180 to 130; an explicit reversal restored 180. Original transactions remained in history. Reload retained the completed production and confirmed preorder. Mobile accounting controls were inspected at 390 × 844 with no horizontal overflow. Fresh console inspection after reload returned no warnings or errors. Restored the normal viewport and created a fresh demo workspace without deleting completed history.
+- Gemini transport is covered with mocked provider tests, but no live Gemini accuracy or quota test was performed.
+- Physical mobile memory, battery use, camera capture and inference performance were not tested.
+- Community reporting shows currently confirmed preorders; it does not yet store a historical “confirmed before production” milestone.
+- Campaign and product visuals are generated/authorized project assets documented in `docs/assets.md`; that record is internal provenance, not an external licence certificate.
+- The static public build is simulated local state. PostgreSQL persistence, ledgers and multi-session guarantees apply only to the local full application.
+- A non-empty Gemini key was found temporarily in the uncommitted `.env.example` during this audit. It was removed, was not staged and was not found in Git history or the rebuilt static output. The credential must still be revoked or rotated before release.
 
-New automated cases cover pending/confirmed/cancelled/refunded/failed demand, duplicate cancellation and idempotency keys, allocation releases, immutable original records, reward debit/reversal/expiry, return correction rollback, inspected quality compatibility, missing/limiting auxiliary components, exact mass reconciliation, recorded non-recoverable loss, recoverable residual sources, planned/approved cancellation, started-run exceptions, cancellation/unlock races, allocation/release races and concurrent credit debits. Direct PostgreSQL checks reject fabricated consumption and mass statements.
-
-## Boundaries
-
-All physical inspections, demand seed records, payments and production are simulated. Connected AI transport is mocked in tests; no paid live model call was made. Local role simulation is not production authentication. Browser testing used the local app only; nothing was published externally.
+**Acceptance verdict: NOT READY until the exposed Gemini credential is revoked or rotated.** After rotation, the tested release candidate meets the audited local and static release gates. The currently deployed GitHub Pages site is an older build because this audit intentionally did not publish anything.

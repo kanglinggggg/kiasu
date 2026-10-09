@@ -25,7 +25,10 @@ export function usePersistentData() {
     const response = await fetch("/api/snapshot", { cache: "no-store" });
     const next = await response.json();
     if (!response.ok) throw new Error(next.error ?? "Database unavailable");
-    if (seq === sequence.current) setData(next as Snapshot);
+    if (seq === sequence.current) {
+      setData(next as Snapshot);
+      setError("");
+    }
     return next as Snapshot;
   }, []);
   useEffect(() => {

@@ -5,7 +5,12 @@ import { one, allocate, audit } from "./service";
 import { defaultBatch } from "../mock-data";
 import { calculateConcepts } from "../remix-engine";
 import { calculateRoutes } from "../circular-engine";
-export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
+export type DemoScenario = "standard" | "genuine_shortage";
+export async function seedWorkspace(
+  c: PoolClient,
+  name = "Remix Demo",
+  scenario: DemoScenario = "standard",
+) {
   const w = await one(
     c,
     "INSERT INTO workspaces(name) VALUES($1) RETURNING id",
@@ -47,25 +52,29 @@ export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
   const batches: Record<string, string> = {},
     sources: Record<string, string> = {};
   for (const code of ["D102", "B017"]) {
+    const isShortageSource = scenario === "genuine_shortage" && code === "D102";
+    const quantity = isShortageSource ? 43 : 180;
+    const weight = isShortageSource ? 34 : 142;
+    const batchInput = { ...defaultBatch, quantity, weight };
     const batch = await one(
       c,
-      `INSERT INTO inventory_batches(workspace_id,brand_id,code,product,original_quantity,original_weight,estimated_material_type,verified_material_type,condition,original_price,estimated_reusable_kg,verified_reusable_kg,status,route,analysis,verified_at) VALUES($1,$2,$3,'Denim Jeans',180,142,'Cotton Denim','Cotton Denim','Unsold / Minor Defects',69,142,142,'route_selected','Remix',$4,now()) RETURNING id`,
-      [w.id, brand.id, code, JSON.stringify(calculateRoutes(defaultBatch))],
+      `INSERT INTO inventory_batches(workspace_id,brand_id,code,product,original_quantity,original_weight,estimated_material_type,verified_material_type,condition,original_price,estimated_reusable_kg,verified_reusable_kg,status,route,analysis,verified_at) VALUES($1,$2,$3,'Denim Jeans',$4,$5,'Cotton Denim','Cotton Denim','Unsold / Minor Defects',69,$5,$5,'route_selected','Remix',$6,now()) RETURNING id`,
+      [w.id, brand.id, code, quantity, weight, JSON.stringify(calculateRoutes(batchInput))],
     );
     batches[code] = batch.id;
     await c.query(
-      "INSERT INTO inventory_items(batch_id,description,quantity) VALUES($1,'Denim Jeans',180)",
-      [batch.id],
+      "INSERT INTO inventory_items(batch_id,description,quantity) VALUES($1,'Denim Jeans',$2)",
+      [batch.id, quantity],
     );
     const source = await one(
       c,
-      "INSERT INTO material_sources(workspace_id,source_type,batch_id,material_type,verified_kg) VALUES($1,'brand_inventory',$2,'Cotton Denim',142) RETURNING id",
-      [w.id, batch.id],
+      "INSERT INTO material_sources(workspace_id,source_type,batch_id,material_type,verified_kg) VALUES($1,'brand_inventory',$2,'Cotton Denim',$3) RETURNING id",
+      [w.id, batch.id, weight],
     );
     sources[code] = source.id;
     await audit(c, admin, "inventory_verified", "inventory_batch", batch.id, {
       seed: true,
-      kg: 142,
+      kg: weight,
       simulated: true,
     });
   }
@@ -73,9 +82,10 @@ export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
   for (const recipe of calculateConcepts(defaultBatch)) {
     const r = await one(
       c,
-      "INSERT INTO remix_concepts(workspace_id,batch_id,recipe_key,name,selling_price,unit_cost,input_kg,preorder_threshold,utilisation,reasoning,approved) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true) RETURNING id",
+      "INSERT INTO remix_concepts(workspace_id,brand_id,batch_id,recipe_key,name,selling_price,unit_cost,input_kg,preorder_threshold,utilisation,reasoning,approved,proposal_source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,true,'seeded_demo') RETURNING id",
       [
         w.id,
+        brand.id,
         batches.B017,
         recipe.id,
         recipe.name,
@@ -86,6 +96,10 @@ export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
         recipe.utilisation,
         recipe.reason,
       ],
+    );
+    await c.query(
+      "UPDATE remix_concepts SET recipe_registered=true,brand_approved_at=now(),maker_approved_at=now(),maker_name='Prototype maker review · simulated' WHERE id=$1",
+      [r.id],
     );
     concepts[recipe.id] = r.id;
   }
@@ -145,9 +159,10 @@ export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
     if (!conceptId) {
       const con = await one(
         c,
-        "INSERT INTO remix_concepts(workspace_id,recipe_key,name,selling_price,unit_cost,input_kg,preorder_threshold,utilisation,reasoning,approved) VALUES($1,$2,$3,$4,$5,$6,$7,84,$8,true) RETURNING id",
+        "INSERT INTO remix_concepts(workspace_id,brand_id,recipe_key,name,selling_price,unit_cost,input_kg,preorder_threshold,utilisation,reasoning,approved,proposal_source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,84,$9,true,'seeded_demo') RETURNING id",
         [
           w.id,
+          brand.id,
           recipe.key,
           recipe.name,
           recipe.price,
@@ -156,6 +171,10 @@ export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
           recipe.threshold,
           "Registered prototype recipe; economics are estimates.",
         ],
+      );
+      await c.query(
+        "UPDATE remix_concepts SET recipe_registered=true,brand_approved_at=now(),maker_approved_at=now(),maker_name='Prototype maker review · simulated' WHERE id=$1",
+        [con.id],
       );
       conceptId = con.id;
     }
@@ -194,9 +213,10 @@ export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
     )
   ).rows;
   for (const code of ["DROP017", "DROP024"]) {
+    const preorderCount = 41;
     await c.query(
       "INSERT INTO preorders(drop_id,user_id,unit_price) SELECT $1,x,49 FROM unnest($2::uuid[]) x",
-      [seededDrops[code], people.slice(0, 41).map((p) => p.id)],
+      [seededDrops[code], people.slice(0, preorderCount).map((p) => p.id)],
     );
     await c.query(
       "INSERT INTO votes(drop_id,user_id) SELECT $1,x FROM unnest($2::uuid[]) x",
@@ -241,16 +261,22 @@ export async function seedWorkspace(c: PoolClient, name = "Remix Demo") {
       requestKey: crypto.randomUUID(),
     });
     await c.query(
-      "INSERT INTO reward_transactions(workspace_id,user_id,receipt_id,type,amount,reason) VALUES($1,$2,$3,'return_base',100,'Observed demo seed: accepted return'),($1,$2,$3,'material_bonus',80,'Observed demo seed: material demand bonus')",
+      "INSERT INTO reward_transactions(workspace_id,user_id,receipt_id,type,amount,reason) VALUES($1,$2,$3,'return_base',100,'Observed demo seed: accepted return')",
       [w.id, user, receipt.id],
     );
+    if (scenario === "genuine_shortage")
+      await c.query(
+        "INSERT INTO reward_transactions(workspace_id,user_id,receipt_id,type,amount,reason) VALUES($1,$2,$3,'material_bonus',80,'Observed demo seed: genuine material shortage bonus')",
+        [w.id, user, receipt.id],
+      );
     await audit(c, admin, "return_verified", "return_request", ret.id, {
       seed: true,
       kg: 0.8,
     });
   }
   await audit(c, admin, "demo_seeded", "workspace", w.id, {
-    seedVersion: 1,
+    seedVersion: 2,
+    scenario,
     simulated: true,
   });
   return { workspaceId: w.id, admin, users: demoUsers };

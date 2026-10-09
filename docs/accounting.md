@@ -143,3 +143,39 @@ The app remains a localhost demo with simulated identity selection. These accoun
 Migration 011 replaces production guards and the component-readiness view. It never modifies committed allocations, receipts, rewards or historical run quantities. New demo seeds allocate 34 kg from D102 plus 7.2 kg from previous returns. A verified 0.8 kg return supplies the 42-unit plan. Existing 67.2 kg allocations already satisfy that plan and must not advertise a further shortage. Matching/rewards use the plan shortage; extra allocations up to material maximum remain possible for explicit surplus/residual scenarios.
 
 Production planning commits all current confirmed orders, with at least the maker minimum. Supplying a smaller `units` value cannot bypass an unmet plan. PostgreSQL independently rejects such inserts. A cancellation before commitment recalculates the target; after commitment it does not silently resize a run. Both approval and start check the fixed run quantity against each BOM component.
+
+
+## V7 checkout accounting (migrations 012–014)
+
+```mermaid
+erDiagram
+  users ||--o{ discount_entitlements : owns
+  return_receipts ||--o| discount_entitlements : qualifies
+  discount_entitlements ||--o{ entitlement_events : transitions
+  discount_entitlements ||--o{ checkout_records : applies
+  preorders ||--o| checkout_records : prices
+  reward_transactions ||--o| checkout_records : debits
+  users ||--o{ waitlist_entries : signals
+  drops ||--o{ waitlist_entries : receives
+  workspaces ||--o| commerce_policies : configures
+```
+
+Checkout amounts and exchange-policy snapshots are immutable; only lifecycle status changes. `price_cents = discount_cents + credit_cents + payable_cents`. Default stacking cap: 25%. Credit redemption rounds down to whole cents; sub-cent redemptions are rejected. Financial summaries count only confirmed orders and distinguish original merchandise value from net simulated commitments.
+
+Brand scenario accounting deducts return discounts and expected redeemed-credit value from sales exactly once, then subtracts separately entered relevant operating costs. The conventional baseline uses its own entered units; the circular forecast alone is capped by verified material capacity. Break-even above that capacity is identified as unreachable under current constraints, and a zero-net-sales contribution margin is undefined rather than reported as zero. Unredeemed wallet credits remain outside the automatic forecast and must not be duplicated under other costs when expected redemption is entered.
+
+Migration 014 independently enforces the permitted checkout transitions, exact credit exchange arithmetic, entitlement-backed discount arithmetic, recipe/owner/workspace links and deferred end-of-transaction consistency between checkout, preorder, credit reversal and entitlement state. Direct SQL cannot revive a terminal checkout, reserve an unlinked entitlement, invent a discount, or assign a different monetary value to redeemed credits.
+
+A reserved checkout writes a negative `redeem` reward transaction. Cancellation/failure writes an equal positive `reverse` referencing it. Existing reward guards prevent negative balances and duplicate reversals. Workspace serialization, row locks, unique receipt grants, unique preorder checkouts and command keys prevent repeated spending. Direct preorder state changes go through the same checkout reconciliation hook. Approved or started production is not automatically cancelled by consumer cancellation; existing business exceptions remain.
+
+GMV is original order price × confirmed units. Return discounts and redeemed-credit value reduce net simulated sales once. Simulated cash payable equals the checkout net amount; it is not realized revenue. Contribution profit is a forecast: net simulated sales minus the entered fixed and per-unit assumptions. Preparation and cancellation-risk allowances are explicit inputs alongside collection, inspection, auxiliaries, manufacturing, logistics, platform fees and setup. A zero input means the cost is not included and remains unverified.
+
+Recovered-material stock is brand-authorized. Every source owner is derived from immutable inventory, return-target or residual-run lineage. Shortage and bonus calculations subtract only verified allocation and compatible available sources authorized for that Drop brand. PostgreSQL rejects a source-to-Drop movement when those brands differ. No cross-brand loyalty settlement or material marketplace accounting is implemented.
+
+Entitlement states: available -> reserved -> redeemed. Cancellation/failure returns eligibility to available when still valid, otherwise revoked. Original receipt and expiry are unchanged; each transition is append-logged. Return correction is blocked while its discount is in use. Expired reserved checkouts must be explicitly cancelled from the wallet; no automatic background sweeper is claimed.
+
+Materials Wanted quotes subtract compatible stock before offering bonuses. V7 base-return earnings and capped shortage bonuses are independently recorded. The default seed has 108 kg of compatible free brand stock, so no new shortage bonus is due for the default return. Historical 180-credit grants are not edited; current grants are 100 base credits for a qualified 0.8 kg return. The old default test expectations change to reflect this documented correctness fix, with all original scenarios retained.
+
+`material_bonus_balances` recursively follows every adjustment from each original bonus, including an expiration, reversal of that expiration and final earning reversal. Both UI quote budgets and the database budget trigger sum those rooted balances. Net material-bonus budget utilization therefore comes from the full immutable ledger rather than only one generation of references. It is a prototype issuance guard, not a full accounting valuation of outstanding wallet-credit liabilities.
+
+Community totals exclude return corrections and cancelled production. No carbon or diversion benefit is inferred from financial or mass ledgers. Margin scenarios are explicit forecasts; stock capacity and observed demand are context, never evidence that forecast sales or profit have occurred.

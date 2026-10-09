@@ -2,6 +2,13 @@
 import { useState } from "react";
 import { Snapshot } from "@/lib/server/types";
 import { money } from "@/lib/mock-data";
+
+const sgd = (cents: number) =>
+  new Intl.NumberFormat("en-SG", {
+    style: "currency",
+    currency: "SGD",
+    currencyDisplay: "code",
+  }).format(cents / 100);
 type Props = {
   data: Snapshot;
   onItem?: (id: string) => void;
@@ -110,22 +117,38 @@ export function DomainHistory({ data, onBatch, onDrop, onItem }: Props) {
         {view === tabs[3] && (
           <>
             {!data.preorders.length && <p>No preorders yet.</p>}
-            {data.preorders.map((p) => (
-              <div className="history-row" key={p.id}>
-                <strong>
-                  {p.code} · {p.status}
-                </strong>
-                <span>
-                  {money(p.unit_price)} · payment: {p.payment_status}
-                </span>
-                <button
-                  className="text-button"
-                  onClick={() => onDrop?.(p.drop_id)}
-                >
-                  View contributed drop
-                </button>
-              </div>
-            ))}
+            {data.preorders.map((p) => {
+              const checkout = data.commerce.checkouts.find(
+                (record) => record.preorder_id === p.id,
+              );
+              return (
+                <div className="history-row" key={p.id}>
+                  <strong>
+                    {p.code} · {p.status}
+                  </strong>
+                  {checkout ? (
+                    <span>
+                      Product value {sgd(checkout.price_cents)} − return
+                      discount {sgd(checkout.discount_cents)} − credits{" "}
+                      {sgd(checkout.credit_cents)} = {sgd(checkout.payable_cents)}{" "}
+                      simulated payable · checkout: {checkout.status} · payment:{" "}
+                      {p.payment_status}
+                    </span>
+                  ) : (
+                    <span>
+                      Product value {money(p.unit_price)} · payment:{" "}
+                      {p.payment_status}
+                    </span>
+                  )}
+                  <button
+                    className="text-button"
+                    onClick={() => onDrop?.(p.drop_id)}
+                  >
+                    View contributed drop
+                  </button>
+                </div>
+              );
+            })}
           </>
         )}
         {view === tabs[4] && (

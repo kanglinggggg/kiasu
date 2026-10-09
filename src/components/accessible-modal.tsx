@@ -4,9 +4,11 @@ import { useEffect, useRef, type ReactNode } from "react";
 export function AccessibleModal({
   children,
   onClose,
+  label = "Dialog",
 }: {
   children: ReactNode;
   onClose: () => void;
+  label?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
@@ -55,9 +57,17 @@ export function AccessibleModal({
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-label="Confirm simulated preorder"
+        aria-label={label}
         className="modal"
       >
+        <button
+          className="modal-close"
+          type="button"
+          onClick={onClose}
+          aria-label={`Close ${label}`}
+        >
+          Close ×
+        </button>
         {children}
       </div>
     </div>

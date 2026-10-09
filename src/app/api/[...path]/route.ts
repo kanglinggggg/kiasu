@@ -11,7 +11,7 @@ import { execute, one, audit } from "@/lib/server/service";
 import { snapshot } from "@/lib/server/snapshot";
 import { seedWorkspace } from "@/lib/server/seed";
 import { DomainError, role, type Actor } from "@/lib/server/domain";
-import { empty, id } from "@/lib/server/validation";
+import { id } from "@/lib/server/validation";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "no-store" };
@@ -132,12 +132,24 @@ export async function POST(
       return Response.json({ ok: true }, { headers });
     }
     if (path.join("/") === "demo-reset") {
-      empty.parse(body);
+      const input = z
+        .object({
+          scenario: z
+            .enum(["standard", "genuine_shortage"])
+            .default("standard"),
+        })
+        .strict()
+        .parse(body);
       role(actor);
       const seeded = await transaction(async (c) => {
+        const label =
+          input.scenario === "genuine_shortage"
+            ? " · GENUINE SHORTAGE"
+            : "";
         const next = await seedWorkspace(
           c,
-          `Demo run ${new Date().toISOString()}`,
+          `Demo run ${new Date().toISOString()}${label}`,
+          input.scenario,
         );
         await c.query(
           "UPDATE demo_sessions SET user_id=$2 WHERE token_hash=$1",

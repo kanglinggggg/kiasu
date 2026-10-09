@@ -101,6 +101,12 @@ export const conceptsInput = z
   })
   .strict();
 export const createDropInput = z.object({ conceptId: id }).strict();
+export const approveConceptInput = z
+  .object({
+    makerName: z.string().trim().min(3).max(120),
+    note: z.string().trim().min(3).max(1000),
+  })
+  .strict();
 
 export const preorderInput = z
   .object({ status: z.enum(["pending", "confirmed"]).default("confirmed") })
